@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Détail vhost | Admin Nginx{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div>
+    <h1 class="page-title">Détail vhost</h1>
+    <p class="page-subtitle">
+      Lecture du fichier de configuration Nginx détecté.
+    </p>
+  </div>
+
+  <a class="button button-secondary" href="{% url 'site_list' %}">
+    Retour aux sites
+  </a>
+</header>
+
+{% if not vhost %}
+  <section class="card">
+    <div class="panel-title">
+      <h2>Vhost introuvable</h2>
+      <span class="badge badge-orange">404</span>
+    </div>
+
+    <p class="muted">
+      Le fichier demandé n’existe pas ou n’est pas un fichier de configuration valide.
+    </p>
+  </section>
+{% else %}
+
+    <section class="grid">
+        <article class="card">
+        <h2>Domaine principal</h2>
+        <div class="metric">{{ vhost.primary_domain }}</div>
+        <p class="muted">Premier domaine détecté dans la directive server_name.</p>
+        <span class="badge badge-green">Détecté</span>
+        </article>
+
+        <article class="card">
+            <h2>Fichier</h2>
+            <div class="metric" style="font-size:1.25rem;">{{ vhost.file }}</div>
+            <p class="muted">{{ vhost.path }}</p>
+            <span class="badge badge-blue">Configuration</span>
+        </article>
+        <article class="card">
+            <h2>Diagnostics</h2>
+            <div class="metric">{{ diagnostics|length }}</div>
+            <p class="muted">Contrôles actifs sur le domaine principal.</p>
+            <span class="badge badge-green">Actif</span>
+        </article>
+    </section>
+
+    <section class="card">
+        <div class="panel-title">
+        <h2>Domaines détectés</h2>
+        <span class="badge badge-blue">{{ vhost.domains|length }} domaine(s)</span>
+        </div>
+
+        {% for domain in vhost.domains %}
+        <span class="badge badge-blue">{{ domain }}</span>
+        {% empty %}
+        <p class="muted">Aucun domaine détecté.</p>
+        {% endfor %}
+    </section>
+    <section class="card" style="margin-top:18px;">
+    <div class="panel-title">
+        <h2>Diagnostics réseau</h2>
+        <span class="badge badge-blue">Live</span>
+    </div>
+
+    {% if diagnostics %}
+        <div class="diagnostic-grid">
+        {% for item in diagnostics %}
+            <article class="diagnostic-item diagnostic-{{ item.status }}">
+            <div>
+                <strong>{{ item.name }}</strong>
+                <p>{{ item.message }}</p>
+            </div>
+
+            {% if item.status == "success" %}
+                <span class="badge badge-green">OK</span>
+            {% elif item.status == "warning" %}
+                <span class="badge badge-orange">Warning</span>
+            {% else %}
+                <span class="badge badge-red">Error</span>
+            {% endif %}
+            </article>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">Aucun diagnostic disponible.</p>
+    {% endif %}
+    </section>
+  <section class="card" style="margin-top:18px;">
+    <div class="panel-title">
+      <h2>Contenu du fichier</h2>
+      <span class="badge badge-blue">Lecture seule</span>
+    </div>
+
+    <pre class="code-block"><code>{{ vhost.content }}</code></pre>
+  </section>
+
+{% endif %}
+{% endblock %}

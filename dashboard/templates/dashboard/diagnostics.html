@@ -1,0 +1,82 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Diagnostics | Admin Nginx{% endblock %}
+
+{% block content %}
+
+<header class="topbar">
+<div>
+<h1 class="page-title">
+Diagnostic domaine
+</h1>
+
+<p class="page-subtitle">
+Tester DNS, HTTP, HTTPS et SSL avant création du vhost.
+</p>
+</div>
+</header>
+
+
+<section class="card">
+
+<div class="panel-title">
+<h2>Lancer un test</h2>
+<span class="badge badge-blue">Live</span>
+</div>
+
+<form method="post" class="site-form">
+{% csrf_token %}
+
+{{ form.as_p }}
+
+<button class="button" type="submit">
+Analyser le domaine
+</button>
+
+</form>
+
+</section>
+
+
+{% if results %}
+
+<section class="card" style="margin-top:20px;">
+
+<div class="panel-title">
+<h2>Résultats pour {{ domain }}</h2>
+<span class="badge badge-green">
+{{ results|length }} checks
+</span>
+</div>
+
+<div class="diagnostic-grid">
+
+{% for item in results %}
+<article class="diagnostic-item diagnostic-{{ item.status }}">
+
+<div>
+<strong>{{ item.name }}</strong>
+<p>{{ item.message }}</p>
+</div>
+
+{% if item.status == "success" %}
+<span class="badge badge-green">OK</span>
+{% elif item.status == "warning" %}
+<span class="badge badge-orange">
+Warning
+</span>
+{% else %}
+<span class="badge badge-red">
+Error
+</span>
+{% endif %}
+
+</article>
+{% endfor %}
+
+</div>
+
+</section>
+
+{% endif %}
+
+{% endblock %}

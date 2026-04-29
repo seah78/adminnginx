@@ -1,0 +1,75 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Configuration générée | Admin Nginx{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div>
+    <h1 class="page-title">Configuration générée</h1>
+    <p class="page-subtitle">
+      Les fichiers de configuration ont été générés.
+    </p>
+  </div>
+</header>
+
+<section class="card">
+  <div class="panel-title">
+    <h2>Données du site</h2>
+    <span class="badge badge-green">Généré</span>
+  </div>
+
+  <table class="table">
+    <tbody>
+      {% for key, value in data.items %}
+        <tr>
+          <th>{{ key }}</th>
+          <td>{{ value }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Fichiers créés</h2>
+    <span class="badge badge-blue">V1</span>
+  </div>
+
+  <table class="table">
+    <tbody>
+      {% for key, value in generated_files.items %}
+        <tr>
+          <th>{{ key }}</th>
+          <td><code>{{ value }}</code></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="actions">
+    <a class="button" href="{% url 'site_create' %}">
+      Créer un autre site
+    </a>
+
+    <a class="button button-secondary" href="/">
+      Retour dashboard
+    </a>
+  </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Commandes à exécuter</h2>
+    <span class="badge badge-orange">
+      Validation manuelle
+    </span>
+  </div>
+
+  <div class="command-list">
+    {% for command in commands %}
+      <pre><code>{{ command }}</code></pre>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

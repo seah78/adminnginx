@@ -1,0 +1,22 @@
+services:
+  adminnginx:
+    image: ghcr.io/TON_COMPTE_GITHUB/adminnginx:latest
+    container_name: adminnginx
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - /opt/nginx_proxy/nginx-config:/nginx-config
+      - /opt/nginx_proxy/html:/nginx-html
+      - /opt/nginx_proxy/letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - internal_network
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+networks:
+  internal_network:
+    external: true

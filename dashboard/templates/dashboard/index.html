@@ -1,0 +1,161 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Dashboard | Admin Nginx{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">
+      Interface d’administration pour préparer les sites, générer les fichiers de configuration
+      et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
+    </p>
+  </div>
+
+  <div class="user-pill">
+    Connecté : {{ request.user.username }}
+  </div>
+</header>
+
+<section class="grid">
+  <article class="card">
+    <h2>Sites configurés</h2>
+    <div class="metric">{{ summary.vhosts_count }}</div>
+    <p class="muted">
+      Fichiers vhost détectés dans la configuration Nginx.
+    </p>
+    <span class="badge badge-green">Inventaire actif</span>
+  </article>
+
+  <article class="card">
+    <h2>Certificats SSL</h2>
+    <div class="metric">{{ summary.certificates_count }}</div>
+    <p class="muted">
+      Certificats détectés dans le dossier Let’s Encrypt.
+    </p>
+    <span class="badge badge-blue">SSL détecté</span>
+  </article>
+
+  <article class="card">
+    <h2>État du panel</h2>
+    <div class="metric">OK</div>
+    <p class="muted">
+      Le dashboard est opérationnel et prêt pour la mise en production.
+    </p>
+    <span class="badge badge-green">Interface active</span>
+  </article>
+</section>
+
+<section class="card">
+  <div class="panel-title">
+    <h2>Actions rapides</h2>
+    <span class="badge badge-blue">Admin</span>
+  </div>
+
+  <p class="muted">
+    Générez un nouveau site, consultez les vhosts existants ou lancez un diagnostic réseau.
+  </p>
+
+  <div class="actions">
+    <a class="button" href="{% url 'site_create' %}">Ajouter un site</a>
+    <a class="button button-secondary" href="{% url 'site_list' %}">Voir les sites</a>
+    <a class="button button-secondary" href="{% url 'diagnostics' %}">Diagnostic domaine</a>
+  </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Sites récents</h2>
+    <span class="badge badge-blue">{{ summary.recent_vhosts|length }} affiché(s)</span>
+  </div>
+
+  {% if summary.recent_vhosts %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Domaine principal</th>
+          <th>Domaines</th>
+          <th>Fichier</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for vhost in summary.recent_vhosts %}
+          <tr>
+            <td>
+              <a class="table-link" href="{% url 'site_detail' vhost.file %}">
+                {{ vhost.primary_domain }}
+              </a>
+            </td>
+            <td>
+              {% for domain in vhost.domains %}
+                <span class="badge badge-blue">{{ domain }}</span>
+              {% endfor %}
+            </td>
+            <td><code>{{ vhost.file }}</code></td>
+            <td><span class="badge badge-green">Détecté</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">
+      Aucun vhost détecté pour le moment.
+    </p>
+  {% endif %}
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Certificats SSL détectés</h2>
+    <span class="badge badge-blue">{{ summary.certificates|length }} certificat(s)</span>
+  </div>
+
+  {% if summary.certificates %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Domaine</th>
+          <th>fullchain.pem</th>
+          <th>privkey.pem</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for cert in summary.certificates %}
+          <tr>
+            <td>{{ cert.domain }}</td>
+            <td>
+              {% if cert.fullchain_exists %}
+                <span class="badge badge-green">Présent</span>
+              {% else %}
+                <span class="badge badge-red">Absent</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if cert.privkey_exists %}
+                <span class="badge badge-green">Présent</span>
+              {% else %}
+                <span class="badge badge-red">Absent</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if cert.fullchain_exists and cert.privkey_exists %}
+                <span class="badge badge-green">Complet</span>
+              {% else %}
+                <span class="badge badge-orange">Incomplet</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">
+      Aucun certificat détecté pour le moment.
+    </p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Nouveau site | Admin Nginx{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div>
+    <h1 class="page-title">Nouveau site</h1>
+    <p class="page-subtitle">
+      Prépare la configuration d’un nouveau site Docker/GHCR derrière le proxy Nginx.
+    </p>
+  </div>
+</header>
+
+<section class="card">
+  <form method="post" class="form">
+    {% csrf_token %}
+
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+
+        {% if field.help_text %}
+          <p class="field-help">{{ field.help_text }}</p>
+        {% endif %}
+
+        {% for error in field.errors %}
+          <p class="field-error">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button class="button" type="submit">Générer</button>
+      <a class="button button-secondary" href="/">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
