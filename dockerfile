@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . /app/
 
-RUN sed -i 's/\r$//' /app/entrypoint.sh \
+RUN sed -i 's/\r$//' /entrypoint.sh \
     && chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
