@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import docker
 
 from pathlib import Path
 from django.conf import settings
@@ -241,35 +242,28 @@ def update_vhost_file(filename: str, content: str) -> bool:
     return True
 
 
-def nginx_test() -> tuple[bool, str]:
+def run_nginx_command(command: list[str]) -> tuple[bool, str]:
     try:
-        result = subprocess.run(
-            ["docker", "exec", "nginx_proxy", "nginx", "-t"],
-            capture_output=True,
-            text=True,
+        client = docker.from_env()
+        container = client.containers.get("nginx_proxy")
+
+        result = container.exec_run(
+            command,
+            stdout=True,
+            stderr=True,
         )
 
-        success = result.returncode == 0
-        output = result.stdout + result.stderr
+        output = result.output.decode("utf-8", errors="ignore")
 
-        return success, output
+        return result.exit_code == 0, output
 
-    except Exception as e:
-        return False, str(e)
+    except Exception as error:
+        return False, str(error)
+
+
+def nginx_test() -> tuple[bool, str]:
+    return run_nginx_command(["nginx", "-t"])
 
 
 def nginx_reload() -> tuple[bool, str]:
-    try:
-        result = subprocess.run(
-            ["docker", "exec", "nginx_proxy", "nginx", "-s", "reload"],
-            capture_output=True,
-            text=True,
-        )
-
-        success = result.returncode == 0
-        output = result.stdout + result.stderr
-
-        return success, output
-
-    except Exception as e:
-        return False, str(e)
+    return run_nginx_command(["nginx", "-s", "reload"])
