@@ -11,7 +11,7 @@ from .generator import (
     nginx_reload,
     run_certbot_certonly,
 )
-
+from .operation_store import add_operation_step, finish_operation
 
 PROTECTED_CONTAINERS = {
     "adminnginx",
@@ -265,3 +265,84 @@ def delete_site(filename: str) -> dict:
             "success": False,
             "steps": steps,
         }
+    
+def add_live_step(
+    operation_id: str,
+    name: str,
+    success: bool,
+    message: str = "",
+) -> None:
+    add_operation_step(
+        operation_id,
+        name,
+        "success" if success else "error",
+        message,
+    )
+
+def provision_site_live(data: dict, operation_id: str) -> None:
+    project_dir = HOST_OPT_DIR / data["project_name"]
+    compose_path = project_dir / "docker-compose.prod.yml"
+    nginx_path = NGINX_CONFIG_DIR / f"{data['domain']}.conf"
+
+    try:
+        project_dir.mkdir(parents=True, exist_ok=True)
+        add_live_step(operation_id, "Création du dossier projet", True, str(project_dir))
+
+        compose_path.write_text(
+            generate_docker_compose(data),
+            encoding="utf-8",
+        )
+        add_live_step(operation_id, "Création du docker-compose", True, str(compose_path))
+
+        nginx_path.write_text(
+            generate_nginx_vhost(data),
+            encoding="utf-8",
+        )
+        add_live_step(operation_id, "Création du vhost HTTP", True, str(nginx_path))
+
+        success, output = nginx_test()
+        add_live_step(operation_id, "Test Nginx HTTP", success, output)
+
+        if not success:
+            finish_operation(operation_id, False)
+            return
+
+        success, output = nginx_reload()
+        add_live_step(operation_id, "Reload Nginx HTTP", success, output)
+
+        if not success:
+            finish_operation(operation_id, False)
+            return
+
+        success, output = run_certbot_certonly(data)
+        add_live_step(operation_id, "Création du certificat SSL", success, output)
+
+        if not success:
+            finish_operation(operation_id, False)
+            return
+
+        nginx_path.write_text(
+            generate_nginx_https_vhost(data),
+            encoding="utf-8",
+        )
+        add_live_step(operation_id, "Création du vhost HTTPS", True, str(nginx_path))
+
+        success, output = nginx_test()
+        add_live_step(operation_id, "Test Nginx HTTPS", success, output)
+
+        if not success:
+            finish_operation(operation_id, False)
+            return
+
+        success, output = nginx_reload()
+        add_live_step(operation_id, "Reload Nginx HTTPS", success, output)
+
+        if not success:
+            finish_operation(operation_id, False)
+            return
+
+        finish_operation(operation_id, True)
+
+    except Exception as error:
+        add_live_step(operation_id, "Erreur provisionnement", False, str(error))
+        finish_operation(operation_id, False)

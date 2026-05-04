@@ -1,0 +1,50 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Provisionnement | Admin Nginx{% endblock %}
+
+{# ===== HEADER ===== #}
+{% block page_title %}Provisionnement du site{% endblock %}
+
+{% block page_subtitle %}
+Résultat des étapes automatisées de création du site.
+{% endblock %}
+
+{% block page_actions %}
+<a class="button button-secondary" href="{% url 'site_list' %}">
+  Voir les sites
+</a>
+{% endblock %}
+{# ================== #}
+
+{% block content %}
+
+<section class="card">
+  <div class="panel-title">
+    <h2>{{ data.domain }}</h2>
+
+    {% if result.success %}
+      <span class="badge badge-green">Succès</span>
+    {% else %}
+      <span class="badge badge-red">Erreur</span>
+    {% endif %}
+  </div>
+
+  <div class="diagnostic-grid">
+    {% for step in result.steps %}
+      <article class="diagnostic-item {% if step.success %}diagnostic-success{% else %}diagnostic-error{% endif %}">
+        <div>
+          <strong>{{ step.name }}</strong>
+          <p>{{ step.message }}</p>
+        </div>
+
+        {% if step.success %}
+          <span class="badge badge-green">OK</span>
+        {% else %}
+          <span class="badge badge-red">Erreur</span>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

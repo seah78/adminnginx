@@ -1,3 +1,11 @@
+import threading
+
+from django.http import JsonResponse
+from django.shortcuts import redirect
+
+from .operation_store import create_operation, get_operation
+from .provisioner import provision_site, provision_site_live, delete_site
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
@@ -42,17 +50,17 @@ def site_create(request):
             data["server_path"] = f"/opt/{repo}"
             data["ghcr_image"] = f"ghcr.io/{owner}/{repo}:latest"
 
-            generated_files = write_project_files(data)
+            result = provision_site(data)
 
             return render(
                 request,
-                "dashboard/generated.html",
+                "dashboard/provision_result.html",
                 {
                     "data": data,
-                    "generated_files": generated_files,
-                    "commands": generate_commands(data),
+                    "result": result,
                 },
             )
+            
 
     return render(
         request,
@@ -192,3 +200,19 @@ def nginx_reload_view(request, filename):
     }
 
     return redirect("site_detail", filename=filename)
+
+@login_required
+def site_delete(request, filename):
+    if request.method != "POST":
+        return redirect("site_detail", filename=filename)
+
+    result = delete_site(filename)
+
+    return render(
+        request,
+        "dashboard/delete_result.html",
+        {
+            "result": result,
+            "filename": filename,
+        },
+    )

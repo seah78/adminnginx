@@ -7,7 +7,8 @@ from .views import (
     diagnostics_view,
     site_edit,
     nginx_reload_view,
-    nginx_test_view
+    nginx_test_view,
+    site_delete
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path("diagnostics/", diagnostics_view, name="diagnostics"),
     path("sites/<str:filename>/nginx-test/", nginx_test_view, name="nginx_test"),
     path("sites/<str:filename>/nginx-reload/", nginx_reload_view, name="nginx_reload"),
+    path("sites/<str:filename>/delete/", site_delete, name="site_delete"),
 ]

@@ -22,7 +22,12 @@ Lecture du fichier de configuration Nginx détecté.
 <a class="button button-secondary" href="{% url 'site_edit' vhost.file %}">
   Modifier
 </a>
-
+<form method="post" action="{% url 'site_delete' vhost.file %}" style="display:inline;">
+  {% csrf_token %}
+  <button class="button button-secondary" type="submit">
+    Supprimer
+  </button>
+</form>
 <a class="button button-secondary" href="{% url 'site_list' %}">
   Retour aux sites
 </a>
