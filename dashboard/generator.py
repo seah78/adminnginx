@@ -161,6 +161,7 @@ def list_vhosts() -> list[dict]:
     return vhosts
 
 def get_vhost_detail(filename: str) -> dict | None:
+
     safe_filename = Path(filename).name
 
     if not safe_filename.endswith(".conf"):
@@ -179,6 +180,7 @@ def get_vhost_detail(filename: str) -> dict | None:
         "path": str(conf_path),
         "domains": domains,
         "primary_domain": domains[0] if domains else "Non détecté",
+        "container_name": extract_proxy_container(content),
         "content": content,
     }
 
@@ -267,3 +269,98 @@ def nginx_test() -> tuple[bool, str]:
 
 def nginx_reload() -> tuple[bool, str]:
     return run_nginx_command(["nginx", "-s", "reload"])
+
+def extract_proxy_container(content: str) -> str | None:
+    match = re.search(
+        r"proxy_pass\s+http://([a-zA-Z0-9_.-]+)(?::\d+)?",
+        content,
+    )
+
+    if not match:
+        return None
+
+    return match.group(1)
+
+
+def generate_nginx_https_vhost(data: dict) -> str:
+    server_names = build_server_names(
+        data["domain"],
+        data["include_www"]
+    )
+
+    return f"""server {{
+            listen 80;
+            listen [::]:80;
+            server_name {server_names};
+
+            location /.well-known/acme-challenge/ {{
+                root /usr/share/nginx/html;
+            }}
+
+            location / {{
+                return 301 https://$host$request_uri;
+            }}
+        }}
+
+        server {{
+            listen 443 ssl;
+            http2 on;
+            server_name {server_names};
+
+            ssl_certificate /etc/letsencrypt/live/{data["domain"]}/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/{data["domain"]}/privkey.pem;
+
+            location / {{
+                proxy_pass http://{data["container_name"]}:{data["internal_port"]};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }}
+        }}
+        """
+
+
+def run_certbot_certonly(data: dict) -> tuple[bool, str]:
+    try:
+        client = docker.from_env()
+
+        command = [
+            "certonly",
+            "--webroot",
+            "-w",
+            "/usr/share/nginx/html",
+            "-d",
+            data["domain"],
+            "--email",
+            data["certbot_email"],
+            "--agree-tos",
+            "--no-eff-email",
+        ]
+
+        if data["include_www"]:
+            command.extend(["-d", f"www.{data['domain']}"])
+
+        container = client.containers.run(
+            "certbot/certbot",
+            command=command,
+            remove=True,
+            volumes={
+                "/opt/nginx_proxy/letsencrypt": {
+                    "bind": "/etc/letsencrypt",
+                    "mode": "rw",
+                },
+                "/opt/nginx_proxy/html": {
+                    "bind": "/usr/share/nginx/html",
+                    "mode": "rw",
+                },
+            },
+            detach=False,
+        )
+
+        output = container.decode("utf-8", errors="ignore")
+
+        return True, output
+
+    except Exception as error:
+        return False, str(error)
