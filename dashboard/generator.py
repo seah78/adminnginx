@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 
 from pathlib import Path
 from django.conf import settings
@@ -238,3 +239,37 @@ def update_vhost_file(filename: str, content: str) -> bool:
     conf_path.write_text(content, encoding="utf-8")
 
     return True
+
+
+def nginx_test() -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "nginx_proxy", "nginx", "-t"],
+            capture_output=True,
+            text=True,
+        )
+
+        success = result.returncode == 0
+        output = result.stdout + result.stderr
+
+        return success, output
+
+    except Exception as e:
+        return False, str(e)
+
+
+def nginx_reload() -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "nginx_proxy", "nginx", "-s", "reload"],
+            capture_output=True,
+            text=True,
+        )
+
+        success = result.returncode == 0
+        output = result.stdout + result.stderr
+
+        return success, output
+
+    except Exception as e:
+        return False, str(e)

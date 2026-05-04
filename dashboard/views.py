@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from .forms import SiteProvisionForm, DomainDiagnosticForm, VhostEditForm
 from .generator import (
@@ -9,6 +9,8 @@ from .generator import (
     get_vhost_detail,
     get_dashboard_summary,
     update_vhost_file,
+    nginx_test,
+    nginx_reload,
 )
 from .diagnostics import run_domain_diagnostics
 
@@ -156,19 +158,7 @@ def site_edit(request, filename):
 
             vhost = get_vhost_detail(filename)
 
-            return render(
-                request,
-                "dashboard/site_edit.html",
-                {
-                    "vhost": vhost,
-                    "form": VhostEditForm(
-                        initial={
-                            "content": vhost["content"],
-                        }
-                    ),
-                    "saved": True,
-                },
-            )
+            return redirect("site_detail", filename=filename)
 
     return render(
         request,
@@ -179,3 +169,26 @@ def site_edit(request, filename):
             "saved": False,
         },
     )
+
+@login_required
+def nginx_test_view(request, filename):
+    success, output = nginx_test()
+
+    request.session["nginx_test"] = {
+        "success": success,
+        "output": output,
+    }
+
+    return redirect("site_detail", filename=filename)
+
+
+@login_required
+def nginx_reload_view(request, filename):
+    success, output = nginx_reload()
+
+    request.session["nginx_reload"] = {
+        "success": success,
+        "output": output,
+    }
+
+    return redirect("site_detail", filename=filename)
