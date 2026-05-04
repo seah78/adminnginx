@@ -2,52 +2,38 @@ from django import forms
 
 
 class SiteProvisionForm(forms.Form):
+    github_repo = forms.CharField(
+        label="Repo GitHub",
+        help_text="Format : owner/repository",
+    )
 
     domain = forms.CharField(
         label="Domaine principal",
-        max_length=255,
-        help_text="Exemple : mondomaine.com"
+        help_text="Exemple : example.com",
     )
 
     include_www = forms.BooleanField(
         label="Inclure www",
         required=False,
-        initial=True
-    )
-
-    github_repo = forms.CharField(
-        label="Repository GitHub",
-        max_length=120,
-        help_text="Format : usergithub/monrepo"
+        initial=True,
     )
 
     internal_port = forms.IntegerField(
-        label="Port interne",
+        label="Port interne du conteneur",
         initial=80,
-        min_value=1,
-        max_value=65535
     )
 
     certbot_email = forms.EmailField(
-        label="Email Certbot"
+        label="Email Certbot",
     )
 
-    def clean_github_repo(self):
-        repo = self.cleaned_data["github_repo"]
 
-        if "/" not in repo:
-            raise forms.ValidationError(
-                "Utiliser le format owner/repository"
-            )
-
-        return repo.lower()
-    
 class DomainDiagnosticForm(forms.Form):
     domain = forms.CharField(
-        label="Nom de domaine",
-        max_length=255,
-        help_text="Exemple : mondomaine.com"
+        label="Domaine",
+        help_text="Exemple : example.com",
     )
+
 
 class VhostEditForm(forms.Form):
     content = forms.CharField(
@@ -57,5 +43,5 @@ class VhostEditForm(forms.Form):
                 "rows": 24,
                 "class": "code-textarea",
             }
-        )
+        ),
     )

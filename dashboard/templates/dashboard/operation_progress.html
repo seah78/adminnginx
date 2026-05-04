@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Progression | Admin Nginx{% endblock %}
+
+{# ===== HEADER ===== #}
+{% block page_title %}Opération en cours{% endblock %}
+
+{% block page_subtitle %}
+Les étapes s’affichent automatiquement au fur et à mesure.
+{% endblock %}
+
+{% block page_actions %}
+<a class="button" href="{% url 'site_list' %}">
+  Voir les sites
+</a>
+{% endblock %}
+{# ================== #}
+
+{% block content %}
+
+<section class="card operation-card"
+         data-operation-id="{{ operation_id }}"
+         data-status-url="{% url 'operation_status' operation_id %}">
+  <div class="panel-title">
+    <h2>Progression</h2>
+    <span id="operation-status" class="badge badge-orange">
+      En cours
+    </span>
+  </div>
+
+  <div id="operation-steps" class="diagnostic-grid"></div>
+</section>
+
+<script src="{% static 'dashboard/js/operation-progress.js' %}"></script>
+
+{% endblock %}

@@ -14,7 +14,6 @@
 <body>
   <div class="layout {% if not request.user.is_authenticated %}layout-auth{% endif %}">
     {% if request.user.is_authenticated %}
-
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-title">Admin Nginx</div>
@@ -48,7 +47,7 @@
 
           <form method="post" action="{% url 'logout' %}" style="display:inline;">
             {% csrf_token %}
-            <button class="button button-secondary" type="submit">
+            <button class="button" type="submit">
               Déconnexion
             </button>
           </form>

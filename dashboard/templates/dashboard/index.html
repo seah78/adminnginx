@@ -13,7 +13,6 @@ et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
 
 {% block content %}
 
-
 <section class="grid">
   <article class="card">
     <h2>Sites configurés</h2>
@@ -37,7 +36,7 @@ et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
     <h2>État du panel</h2>
     <div class="metric">OK</div>
     <p class="muted">
-      Le dashboard est opérationnel et prêt pour la mise en production.
+      Le dashboard est opérationnel.
     </p>
     <span class="badge badge-green">Interface active</span>
   </article>
@@ -55,8 +54,8 @@ et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
 
   <div class="actions">
     <a class="button" href="{% url 'site_create' %}">Ajouter un site</a>
-    <a class="button button-secondary" href="{% url 'site_list' %}">Voir les sites</a>
-    <a class="button button-secondary" href="{% url 'diagnostics' %}">Diagnostic domaine</a>
+    <a class="button" href="{% url 'site_list' %}">Voir les sites</a>
+    <a class="button" href="{% url 'diagnostics' %}">Diagnostic domaine</a>
   </div>
 </section>
 
@@ -67,39 +66,37 @@ et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
   </div>
 
   {% if summary.recent_vhosts %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Domaine principal</th>
-        <th>Domaines</th>
-        <th>Fichier</th>
-        <th>Statut</th>
-      </tr>
-    </thead>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Domaine principal</th>
+          <th>Domaines</th>
+          <th>Fichier</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
 
-    <tbody>
-      {% for vhost in summary.recent_vhosts %}
-      <tr>
-        <td>
-          <a class="table-link" href="{% url 'site_detail' vhost.file %}">
-            {{ vhost.primary_domain }}
-          </a>
-        </td>
-        <td>
-          {% for domain in vhost.domains %}
-          <span class="badge badge-blue">{{ domain }}</span>
-          {% endfor %}
-        </td>
-        <td><code>{{ vhost.file }}</code></td>
-        <td><span class="badge badge-green">Détecté</span></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      <tbody>
+        {% for vhost in summary.recent_vhosts %}
+          <tr>
+            <td>
+              <a class="table-link" href="{% url 'site_detail' vhost.file %}">
+                {{ vhost.primary_domain }}
+              </a>
+            </td>
+            <td>
+              {% for domain in vhost.domains %}
+                <span class="badge badge-blue">{{ domain }}</span>
+              {% endfor %}
+            </td>
+            <td><code>{{ vhost.file }}</code></td>
+            <td><span class="badge badge-green">Détecté</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% else %}
-  <p class="muted">
-    Aucun vhost détecté pour le moment.
-  </p>
+    <p class="muted">Aucun vhost détecté pour le moment.</p>
   {% endif %}
 </section>
 
@@ -110,49 +107,48 @@ et centraliser les vérifications DNS, HTTP, HTTPS, IPv6 et SSL.
   </div>
 
   {% if summary.certificates %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Domaine</th>
-        <th>fullchain.pem</th>
-        <th>privkey.pem</th>
-        <th>Statut</th>
-      </tr>
-    </thead>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Domaine</th>
+          <th>fullchain.pem</th>
+          <th>privkey.pem</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
 
-    <tbody>
-      {% for cert in summary.certificates %}
-      <tr>
-        <td>{{ cert.domain }}</td>
-        <td>
-          {% if cert.fullchain_exists %}
-          <span class="badge badge-green">Présent</span>
-          {% else %}
-          <span class="badge badge-red">Absent</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if cert.privkey_exists %}
-          <span class="badge badge-green">Présent</span>
-          {% else %}
-          <span class="badge badge-red">Absent</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if cert.fullchain_exists and cert.privkey_exists %}
-          <span class="badge badge-green">Complet</span>
-          {% else %}
-          <span class="badge badge-orange">Incomplet</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      <tbody>
+        {% for cert in summary.certificates %}
+          <tr>
+            <td>{{ cert.domain }}</td>
+            <td>
+              {% if cert.fullchain_exists %}
+                <span class="badge badge-green">Présent</span>
+              {% else %}
+                <span class="badge badge-red">Absent</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if cert.privkey_exists %}
+                <span class="badge badge-green">Présent</span>
+              {% else %}
+                <span class="badge badge-red">Absent</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if cert.fullchain_exists and cert.privkey_exists %}
+                <span class="badge badge-green">Complet</span>
+              {% else %}
+                <span class="badge badge-orange">Incomplet</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% else %}
-  <p class="muted">
-    Aucun certificat détecté pour le moment.
-  </p>
+    <p class="muted">Aucun certificat détecté pour le moment.</p>
   {% endif %}
 </section>
+
 {% endblock %}

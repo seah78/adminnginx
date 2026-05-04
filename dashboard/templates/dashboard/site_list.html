@@ -31,6 +31,7 @@ Inventaire des fichiers vhost détectés dans la configuration Nginx.
           <th>Domaine principal</th>
           <th>Domaines</th>
           <th>Fichier</th>
+          <th>Container</th>
           <th>Statut</th>
         </tr>
       </thead>
@@ -49,6 +50,7 @@ Inventaire des fichiers vhost détectés dans la configuration Nginx.
               {% endfor %}
             </td>
             <td><code>{{ vhost.file }}</code></td>
+            <td>{{ vhost.container_name|default:"Non détecté" }}</td>
             <td><span class="badge badge-green">Détecté</span></td>
           </tr>
         {% endfor %}
@@ -60,4 +62,5 @@ Inventaire des fichiers vhost détectés dans la configuration Nginx.
     </p>
   {% endif %}
 </section>
+
 {% endblock %}

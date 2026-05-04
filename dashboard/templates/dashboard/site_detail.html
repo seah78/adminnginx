@@ -10,8 +10,8 @@ Lecture du fichier de configuration Nginx détecté.
 {% endblock %}
 
 {% block page_actions %}
-
-<a class="button button-secondary" href="{% url 'nginx_test' vhost.file %}">
+{% if vhost %}
+<a class="button" href="{% url 'nginx_test' vhost.file %}">
   Tester Nginx
 </a>
 
@@ -19,25 +19,25 @@ Lecture du fichier de configuration Nginx détecté.
   Recharger Nginx
 </a>
 
-<a class="button button-secondary" href="{% url 'site_edit' vhost.file %}">
+<a class="button" href="{% url 'site_edit' vhost.file %}">
   Modifier
 </a>
+
 <form method="post" action="{% url 'site_delete' vhost.file %}" style="display:inline;">
   {% csrf_token %}
-  <button class="button button-secondary" type="submit">
+  <button class="button" type="submit">
     Supprimer
   </button>
 </form>
-<a class="button button-secondary" href="{% url 'site_list' %}">
+{% endif %}
+
+<a class="button" href="{% url 'site_list' %}">
   Retour aux sites
 </a>
-
 {% endblock %}
 {# ================== #}
 
 {% block content %}
-
-{# ===== RESULTATS NGINX ===== #}
 
 {% if request.session.nginx_test %}
 <section class="card" style="margin-bottom:18px;">
@@ -69,19 +69,17 @@ Lecture du fichier de configuration Nginx détecté.
 </section>
 {% endif %}
 
-{# ============================ #}
-
 {% if not vhost %}
-  <section class="card">
-    <div class="panel-title">
-      <h2>Vhost introuvable</h2>
-      <span class="badge badge-orange">404</span>
-    </div>
+<section class="card">
+  <div class="panel-title">
+    <h2>Vhost introuvable</h2>
+    <span class="badge badge-orange">404</span>
+  </div>
 
-    <p class="muted">
-      Le fichier demandé n’existe pas ou n’est pas valide.
-    </p>
-  </section>
+  <p class="muted">
+    Le fichier demandé n’existe pas ou n’est pas valide.
+  </p>
+</section>
 
 {% else %}
 
@@ -105,12 +103,14 @@ Lecture du fichier de configuration Nginx détecté.
   </article>
 
   <article class="card">
-    <h2>Diagnostics</h2>
-    <div class="metric">{{ diagnostics|length }}</div>
+    <h2>Container</h2>
+    <div class="metric" style="font-size:1.25rem;">
+      {{ vhost.container_name|default:"Non détecté" }}
+    </div>
     <p class="muted">
-      Contrôles actifs sur le domaine.
+      Container détecté via proxy_pass.
     </p>
-    <span class="badge badge-green">Actif</span>
+    <span class="badge badge-blue">Docker</span>
   </article>
 </section>
 

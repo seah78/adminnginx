@@ -1,26 +1,28 @@
 import threading
 
-from django.http import JsonResponse
-from django.shortcuts import redirect
-
-from .operation_store import create_operation, get_operation
-from .provisioner import provision_site, provision_site_live, delete_site
-
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
-from .forms import SiteProvisionForm, DomainDiagnosticForm, VhostEditForm
+from .forms import (
+    SiteProvisionForm,
+    DomainDiagnosticForm,
+    VhostEditForm,
+)
+
 from .generator import (
-    write_project_files,
-    generate_commands,
+    update_vhost_file,
     list_vhosts,
     get_vhost_detail,
     get_dashboard_summary,
-    update_vhost_file,
     nginx_test,
     nginx_reload,
 )
+
 from .diagnostics import run_domain_diagnostics
+from .operation_store import create_operation, get_operation
+from .provisioner import provision_site_live, delete_site_live
+
 
 @login_required
 def dashboard_home(request):
@@ -31,8 +33,10 @@ def dashboard_home(request):
         "dashboard/index.html",
         {
             "summary": summary,
-        }
+        },
     )
+
+
 @login_required
 def site_create(request):
     form = SiteProvisionForm()
@@ -50,17 +54,19 @@ def site_create(request):
             data["server_path"] = f"/opt/{repo}"
             data["ghcr_image"] = f"ghcr.io/{owner}/{repo}:latest"
 
-            result = provision_site(data)
+            operation_id = create_operation("provision_site")
 
-            return render(
-                request,
-                "dashboard/provision_result.html",
-                {
-                    "data": data,
-                    "result": result,
-                },
+            thread = threading.Thread(
+                target=provision_site_live,
+                args=(data, operation_id),
+                daemon=True,
             )
-            
+            thread.start()
+
+            return redirect(
+                "operation_progress",
+                operation_id=operation_id,
+            )
 
     return render(
         request,
@@ -69,6 +75,7 @@ def site_create(request):
             "form": form,
         },
     )
+
 
 @login_required
 def site_list(request):
@@ -82,6 +89,7 @@ def site_list(request):
         },
     )
 
+
 @login_required
 def site_detail(request, filename):
     vhost = get_vhost_detail(filename)
@@ -92,6 +100,7 @@ def site_detail(request, filename):
             "dashboard/site_detail.html",
             {
                 "vhost": None,
+                "diagnostics": [],
             },
             status=404,
         )
@@ -112,30 +121,6 @@ def site_detail(request, filename):
         },
     )
 
-@login_required
-def diagnostics_view(request):
-
-    form = DomainDiagnosticForm()
-    results = None
-    domain = None
-
-    if request.method == "POST":
-        form = DomainDiagnosticForm(request.POST)
-
-        if form.is_valid():
-            domain = form.cleaned_data["domain"].strip().lower()
-            results = run_domain_diagnostics(domain)
-
-    return render(
-        request,
-        "dashboard/diagnostics.html",
-        {
-            "form": form,
-            "results": results,
-            "domain": domain,
-        }
-    )
-
 
 @login_required
 def site_edit(request, filename):
@@ -145,7 +130,10 @@ def site_edit(request, filename):
         return render(
             request,
             "dashboard/site_edit.html",
-            {"vhost": None},
+            {
+                "vhost": None,
+                "form": None,
+            },
             status=404,
         )
 
@@ -164,9 +152,10 @@ def site_edit(request, filename):
                 form.cleaned_data["content"],
             )
 
-            vhost = get_vhost_detail(filename)
-
-            return redirect("site_detail", filename=filename)
+            return redirect(
+                "site_detail",
+                filename=filename,
+            )
 
     return render(
         request,
@@ -174,9 +163,29 @@ def site_edit(request, filename):
         {
             "vhost": vhost,
             "form": form,
-            "saved": False,
         },
     )
+
+
+@login_required
+def site_delete(request, filename):
+    if request.method != "POST":
+        return redirect("site_detail", filename=filename)
+
+    operation_id = create_operation("delete_site")
+
+    thread = threading.Thread(
+        target=delete_site_live,
+        args=(filename, operation_id),
+        daemon=True,
+    )
+    thread.start()
+
+    return redirect(
+        "operation_progress",
+        operation_id=operation_id,
+    )
+
 
 @login_required
 def nginx_test_view(request, filename):
@@ -201,18 +210,42 @@ def nginx_reload_view(request, filename):
 
     return redirect("site_detail", filename=filename)
 
-@login_required
-def site_delete(request, filename):
-    if request.method != "POST":
-        return redirect("site_detail", filename=filename)
 
-    result = delete_site(filename)
+@login_required
+def diagnostics_view(request):
+    form = DomainDiagnosticForm()
+    results = None
+    domain = None
+
+    if request.method == "POST":
+        form = DomainDiagnosticForm(request.POST)
+
+        if form.is_valid():
+            domain = form.cleaned_data["domain"].strip().lower()
+            results = run_domain_diagnostics(domain)
 
     return render(
         request,
-        "dashboard/delete_result.html",
+        "dashboard/diagnostics.html",
         {
-            "result": result,
-            "filename": filename,
+            "form": form,
+            "results": results,
+            "domain": domain,
         },
     )
+
+
+@login_required
+def operation_progress(request, operation_id):
+    return render(
+        request,
+        "dashboard/operation_progress.html",
+        {
+            "operation_id": operation_id,
+        },
+    )
+
+
+@login_required
+def operation_status(request, operation_id):
+    return JsonResponse(get_operation(operation_id))

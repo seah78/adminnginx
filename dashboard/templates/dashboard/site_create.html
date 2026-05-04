@@ -32,9 +32,10 @@ Prépare la configuration d’un nouveau site Docker/GHCR derrière le proxy Ngi
     {% endfor %}
 
     <div class="actions">
-      <button class="button" type="submit">Générer</button>
-      <a class="button button-secondary" href="/">Annuler</a>
+      <button class="button" type="submit">Lancer l’ajout</button>
+      <a class="button" href="{% url 'dashboard' %}">Annuler</a>
     </div>
   </form>
 </section>
+
 {% endblock %}

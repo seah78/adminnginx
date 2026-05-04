@@ -63,22 +63,39 @@ def save_operation(operation_id: str, data: dict) -> None:
     )
 
 
-def add_operation_step(
+def start_operation_step(
     operation_id: str,
     name: str,
-    status: str,
     message: str = "",
-) -> None:
+) -> int:
     data = get_operation(operation_id)
 
     data["steps"].append(
         {
             "name": name,
-            "status": status,
+            "status": "running",
             "message": message,
             "created_at": datetime.now().isoformat(),
         }
     )
+
+    save_operation(operation_id, data)
+
+    return len(data["steps"]) - 1
+
+
+def update_operation_step(
+    operation_id: str,
+    index: int,
+    status: str,
+    message: str = "",
+) -> None:
+    data = get_operation(operation_id)
+
+    if index < len(data["steps"]):
+        data["steps"][index]["status"] = status
+        data["steps"][index]["message"] = message
+        data["steps"][index]["updated_at"] = datetime.now().isoformat()
 
     save_operation(operation_id, data)
 

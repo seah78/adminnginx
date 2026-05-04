@@ -1,25 +1,36 @@
 import os
 import re
-import subprocess
 import docker
 
 from pathlib import Path
-from django.conf import settings
 
 
 NGINX_CONFIG_DIR = Path(
     os.getenv(
         "ADMINNGINX_NGINX_CONFIG_DIR",
-        "/data/nginx-config"
+        "/data/nginx-config",
     )
 )
 
 HOST_OPT_DIR = Path(
     os.getenv(
         "ADMINNGINX_HOST_OPT_DIR",
-        "/host/opt"
+        "/host/opt",
     )
 )
+
+LETSENCRYPT_DIR = Path(
+    os.getenv(
+        "ADMINNGINX_LETSENCRYPT_DIR",
+        "/data/letsencrypt",
+    )
+)
+
+NGINX_PROXY_CONTAINER = os.getenv(
+    "ADMINNGINX_NGINX_CONTAINER",
+    "nginx_proxy",
+)
+
 
 def build_server_names(domain: str, include_www: bool) -> str:
     if include_www:
@@ -47,7 +58,7 @@ networks:
 def generate_nginx_vhost(data: dict) -> str:
     server_names = build_server_names(
         data["domain"],
-        data["include_www"]
+        data["include_www"],
     )
 
     return f"""server {{
@@ -70,62 +81,44 @@ def generate_nginx_vhost(data: dict) -> str:
 """
 
 
-def write_project_files(data: dict) -> dict:
-    project_dir = HOST_OPT_DIR / data["project_name"]
-    project_dir.mkdir(parents=True, exist_ok=True)
-
-    compose_path = project_dir / "docker-compose.prod.yml"
-    compose_path.write_text(
-        generate_docker_compose(data),
-        encoding="utf-8"
+def generate_nginx_https_vhost(data: dict) -> str:
+    server_names = build_server_names(
+        data["domain"],
+        data["include_www"],
     )
 
-    nginx_path = NGINX_CONFIG_DIR / f"{data['domain']}.conf"
-    nginx_path.write_text(
-        generate_nginx_vhost(data),
-        encoding="utf-8"
-    )
+    return f"""server {{
+    listen 80;
+    listen [::]:80;
+    server_name {server_names};
 
-    return {
-        "project_dir": str(project_dir),
-        "compose_path": str(compose_path),
-        "nginx_path": str(nginx_path),
-    }
+    location /.well-known/acme-challenge/ {{
+        root /usr/share/nginx/html;
+    }}
 
-def generate_commands(data: dict) -> list[str]:
-    domain_args = f"-d {data['domain']}"
+    location / {{
+        return 301 https://$host$request_uri;
+    }}
+}}
 
-    if data["include_www"]:
-        domain_args += f" -d www.{data['domain']}"
+server {{
+    listen 443 ssl;
+    http2 on;
+    server_name {server_names};
 
-    return [
-        f"cd {data['server_path']}",
-        "docker compose -f docker-compose.prod.yml pull",
-        "docker compose -f docker-compose.prod.yml up -d",
-        (
-            "docker run --rm "
-            "-v /opt/nginx_proxy/letsencrypt:/etc/letsencrypt "
-            "-v /opt/nginx_proxy/html:/usr/share/nginx/html "
-            "certbot/certbot certonly "
-            "--webroot -w /usr/share/nginx/html "
-            f"{domain_args} "
-            f"--email {data['certbot_email']} "
-            "--agree-tos --no-eff-email"
-        ),
-        "docker exec nginx_proxy nginx -t",
-        "docker exec nginx_proxy nginx -s reload",
-        (
-            "docker run --rm "
-            "-v /opt/nginx_proxy/letsencrypt:/etc/letsencrypt "
-            "-v /opt/nginx_proxy/html:/usr/share/nginx/html "
-            "certbot/certbot renew "
-            "--webroot -w /usr/share/nginx/html "
-            "--dry-run"
-        ),
-        f"curl -4 -I http://{data['domain']}",
-        f"curl -4 -I https://{data['domain']}",
-        f"curl -6 -I https://{data['domain']}",
-    ]
+    ssl_certificate /etc/letsencrypt/live/{data["domain"]}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{data["domain"]}/privkey.pem;
+
+    location / {{
+        proxy_pass http://{data["container_name"]}:{data["internal_port"]};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }}
+}}
+"""
+
 
 def extract_server_names(content: str) -> list[str]:
     matches = re.findall(r"server_name\s+([^;]+);", content)
@@ -139,6 +132,18 @@ def extract_server_names(content: str) -> list[str]:
     return domains
 
 
+def extract_proxy_container(content: str) -> str | None:
+    match = re.search(
+        r"proxy_pass\s+http://([a-zA-Z0-9_.-]+)(?::\d+)?",
+        content,
+    )
+
+    if not match:
+        return None
+
+    return match.group(1)
+
+
 def list_vhosts() -> list[dict]:
     vhosts = []
 
@@ -146,7 +151,10 @@ def list_vhosts() -> list[dict]:
         return vhosts
 
     for conf_file in sorted(NGINX_CONFIG_DIR.glob("*.conf")):
-        content = conf_file.read_text(encoding="utf-8")
+        content = conf_file.read_text(
+            encoding="utf-8",
+            errors="ignore",
+        )
         domains = extract_server_names(content)
 
         vhosts.append(
@@ -155,13 +163,14 @@ def list_vhosts() -> list[dict]:
                 "path": str(conf_file),
                 "domains": domains,
                 "primary_domain": domains[0] if domains else "Non détecté",
+                "container_name": extract_proxy_container(content),
             }
         )
 
     return vhosts
 
-def get_vhost_detail(filename: str) -> dict | None:
 
+def get_vhost_detail(filename: str) -> dict | None:
     safe_filename = Path(filename).name
 
     if not safe_filename.endswith(".conf"):
@@ -172,7 +181,10 @@ def get_vhost_detail(filename: str) -> dict | None:
     if not conf_path.exists():
         return None
 
-    content = conf_path.read_text(encoding="utf-8")
+    content = conf_path.read_text(
+        encoding="utf-8",
+        errors="ignore",
+    )
     domains = extract_server_names(content)
 
     return {
@@ -184,23 +196,36 @@ def get_vhost_detail(filename: str) -> dict | None:
         "content": content,
     }
 
+
+def update_vhost_file(filename: str, content: str) -> bool:
+    safe_filename = Path(filename).name
+
+    if not safe_filename.endswith(".conf"):
+        return False
+
+    conf_path = NGINX_CONFIG_DIR / safe_filename
+
+    if not conf_path.exists():
+        return False
+
+    conf_path.write_text(content, encoding="utf-8")
+
+    return True
+
+
 def list_ssl_certificates() -> list[dict]:
     certs = []
 
-    letsencrypt_dir = Path(
-        os.getenv(
-            "ADMINNGINX_LETSENCRYPT_DIR",
-            "/data/letsencrypt"
-        )
-    )
-
-    live_dir = letsencrypt_dir / "live"
+    live_dir = LETSENCRYPT_DIR / "live"
 
     if not live_dir.exists():
         return certs
 
     for cert_dir in sorted(live_dir.iterdir()):
         if not cert_dir.is_dir():
+            continue
+
+        if cert_dir.name == "README":
             continue
 
         fullchain = cert_dir / "fullchain.pem"
@@ -228,26 +253,11 @@ def get_dashboard_summary() -> dict:
         "certificates": certs,
     }
 
-def update_vhost_file(filename: str, content: str) -> bool:
-    safe_filename = Path(filename).name
-
-    if not safe_filename.endswith(".conf"):
-        return False
-
-    conf_path = NGINX_CONFIG_DIR / safe_filename
-
-    if not conf_path.exists():
-        return False
-
-    conf_path.write_text(content, encoding="utf-8")
-
-    return True
-
 
 def run_nginx_command(command: list[str]) -> tuple[bool, str]:
     try:
         client = docker.from_env()
-        container = client.containers.get("nginx_proxy")
+        container = client.containers.get(NGINX_PROXY_CONTAINER)
 
         result = container.exec_run(
             command,
@@ -270,56 +280,6 @@ def nginx_test() -> tuple[bool, str]:
 def nginx_reload() -> tuple[bool, str]:
     return run_nginx_command(["nginx", "-s", "reload"])
 
-def extract_proxy_container(content: str) -> str | None:
-    match = re.search(
-        r"proxy_pass\s+http://([a-zA-Z0-9_.-]+)(?::\d+)?",
-        content,
-    )
-
-    if not match:
-        return None
-
-    return match.group(1)
-
-
-def generate_nginx_https_vhost(data: dict) -> str:
-    server_names = build_server_names(
-        data["domain"],
-        data["include_www"]
-    )
-
-    return f"""server {{
-            listen 80;
-            listen [::]:80;
-            server_name {server_names};
-
-            location /.well-known/acme-challenge/ {{
-                root /usr/share/nginx/html;
-            }}
-
-            location / {{
-                return 301 https://$host$request_uri;
-            }}
-        }}
-
-        server {{
-            listen 443 ssl;
-            http2 on;
-            server_name {server_names};
-
-            ssl_certificate /etc/letsencrypt/live/{data["domain"]}/fullchain.pem;
-            ssl_certificate_key /etc/letsencrypt/live/{data["domain"]}/privkey.pem;
-
-            location / {{
-                proxy_pass http://{data["container_name"]}:{data["internal_port"]};
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto https;
-            }}
-        }}
-        """
-
 
 def run_certbot_certonly(data: dict) -> tuple[bool, str]:
     try:
@@ -336,12 +296,13 @@ def run_certbot_certonly(data: dict) -> tuple[bool, str]:
             data["certbot_email"],
             "--agree-tos",
             "--no-eff-email",
+            "--non-interactive",
         ]
 
         if data["include_www"]:
             command.extend(["-d", f"www.{data['domain']}"])
 
-        container = client.containers.run(
+        output = client.containers.run(
             "certbot/certbot",
             command=command,
             remove=True,
@@ -358,9 +319,7 @@ def run_certbot_certonly(data: dict) -> tuple[bool, str]:
             detach=False,
         )
 
-        output = container.decode("utf-8", errors="ignore")
-
-        return True, output
+        return True, output.decode("utf-8", errors="ignore")
 
     except Exception as error:
         return False, str(error)

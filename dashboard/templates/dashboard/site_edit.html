@@ -10,9 +10,11 @@
 {% endblock %}
 
 {% block page_actions %}
-<a class="button button-secondary" href="{% url 'site_detail' vhost.file %}">
+{% if vhost %}
+<a class="button" href="{% url 'site_detail' vhost.file %}">
   Retour au détail
 </a>
+{% endif %}
 {% endblock %}
 {# ================== #}
 
@@ -24,15 +26,6 @@
   <p class="muted">Le fichier demandé n’existe pas.</p>
 </section>
 {% else %}
-
-{% if saved %}
-<section class="card" style="margin-bottom:18px;">
-  <span class="badge badge-green">Configuration enregistrée</span>
-  <p class="muted" style="margin-top:12px;">
-    Pense à tester puis recharger Nginx.
-  </p>
-</section>
-{% endif %}
 
 <section class="card">
   <div class="panel-title">
@@ -52,7 +45,7 @@
         Enregistrer
       </button>
 
-      <a class="button button-secondary" href="{% url 'site_detail' vhost.file %}">
+      <a class="button" href="{% url 'site_detail' vhost.file %}">
         Annuler
       </a>
     </div>
@@ -60,4 +53,5 @@
 </section>
 
 {% endif %}
+
 {% endblock %}
