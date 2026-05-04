@@ -2,19 +2,21 @@
 
 {% block title %}Sites configurés | Admin Nginx{% endblock %}
 
-{% block content %}
-<header class="topbar">
-  <div>
-    <h1 class="page-title">Sites configurés</h1>
-    <p class="page-subtitle">
-      Inventaire des fichiers vhost détectés dans la configuration Nginx.
-    </p>
-  </div>
+{# ===== HEADER ===== #}
+{% block page_title %}Sites configurés{% endblock %}
 
-  <a class="button" href="{% url 'site_create' %}">
-    Ajouter un site
-  </a>
-</header>
+{% block page_subtitle %}
+Inventaire des fichiers vhost détectés dans la configuration Nginx.
+{% endblock %}
+
+{% block page_actions %}
+<a class="button" href="{% url 'site_create' %}">
+  Ajouter un site
+</a>
+{% endblock %}
+{# ================== #}
+
+{% block content %}
 
 <section class="card">
   <div class="panel-title">

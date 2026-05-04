@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,8 +10,11 @@
 
   <link rel="stylesheet" href="{% static 'dashboard/css/style.css' %}">
 </head>
+
 <body>
   <div class="layout">
+    {% if request.user.is_authenticated %}
+
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-title">Admin Nginx</div>
@@ -24,11 +28,38 @@
         <a href="{% url 'diagnostics' %}">Diagnostics</a>
       </nav>
     </aside>
-
+    {% endif %}
     <main class="main">
+
+      {% if request.user.is_authenticated %}
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">
+            {% block page_title %}{% endblock %}
+          </h1>
+
+          <p class="page-subtitle">
+            {% block page_subtitle %}{% endblock %}
+          </p>
+        </div>
+
+        <div class="topbar-actions">
+          {% block page_actions %}{% endblock %}
+
+          <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="button button-secondary" type="submit">
+              Déconnexion
+            </button>
+          </form>
+        </div>
+      </header>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
   </div>
   <script src="{% static 'dashboard/js/main.js' %}"></script>
 </body>
+
 </html>

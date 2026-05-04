@@ -2,15 +2,15 @@
 
 {% block title %}Nouveau site | Admin Nginx{% endblock %}
 
+{# ===== HEADER ===== #}
+{% block page_title %}Nouveau site{% endblock %}
+
+{% block page_subtitle %}
+Prépare la configuration d’un nouveau site Docker/GHCR derrière le proxy Nginx.
+{% endblock %}
+{# ================== #}
+
 {% block content %}
-<header class="topbar">
-  <div>
-    <h1 class="page-title">Nouveau site</h1>
-    <p class="page-subtitle">
-      Prépare la configuration d’un nouveau site Docker/GHCR derrière le proxy Nginx.
-    </p>
-  </div>
-</header>
 
 <section class="card">
   <form method="post" class="form">

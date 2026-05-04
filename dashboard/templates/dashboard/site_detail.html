@@ -2,19 +2,21 @@
 
 {% block title %}Détail vhost | Admin Nginx{% endblock %}
 
-{% block content %}
-<header class="topbar">
-  <div>
-    <h1 class="page-title">Détail vhost</h1>
-    <p class="page-subtitle">
-      Lecture du fichier de configuration Nginx détecté.
-    </p>
-  </div>
+{# ===== HEADER ===== #}
+{% block page_title %}Détail vhost{% endblock %}
 
-  <a class="button button-secondary" href="{% url 'site_list' %}">
-    Retour aux sites
-  </a>
-</header>
+{% block page_subtitle %}
+Lecture du fichier de configuration Nginx détecté.
+{% endblock %}
+
+{% block page_actions %}
+<a class="button button-secondary" href="{% url 'site_list' %}">
+  Retour aux sites
+</a>
+{% endblock %}
+{# ================== #}
+
+{% block content %}
 
 {% if not vhost %}
   <section class="card">

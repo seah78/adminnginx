@@ -1,19 +1,16 @@
 {% extends "dashboard/base.html" %}
+
 {% block title %}Diagnostics | Admin Nginx{% endblock %}
 
+{# ===== HEADER ===== #}
+{% block page_title %}Diagnostic domaine{% endblock %}
+
+{% block page_subtitle %}
+Tester DNS, HTTP, HTTPS et SSL avant création du vhost.
+{% endblock %}
+{# ================== #}
+
 {% block content %}
-
-<header class="topbar">
-    <div>
-        <h1 class="page-title">
-            Diagnostic domaine
-        </h1>
-
-        <p class="page-subtitle">
-            Tester DNS, HTTP, HTTPS et SSL avant création du vhost.
-        </p>
-    </div>
-</header>
 
 
 <section class="card">
