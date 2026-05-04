@@ -10,6 +10,9 @@ Lecture du fichier de configuration Nginx détecté.
 {% endblock %}
 
 {% block page_actions %}
+<a class="button" href="{% url 'site_edit' vhost.file %}">
+  Modifier
+</a>
 <a class="button button-secondary" href="{% url 'site_list' %}">
   Retour aux sites
 </a>

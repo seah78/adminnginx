@@ -48,3 +48,14 @@ class DomainDiagnosticForm(forms.Form):
         max_length=255,
         help_text="Exemple : mondomaine.com"
     )
+
+class VhostEditForm(forms.Form):
+    content = forms.CharField(
+        label="Contenu du fichier",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 24,
+                "class": "code-textarea",
+            }
+        )
+    )

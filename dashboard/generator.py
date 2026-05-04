@@ -223,3 +223,18 @@ def get_dashboard_summary() -> dict:
         "recent_vhosts": vhosts[:5],
         "certificates": certs,
     }
+
+def update_vhost_file(filename: str, content: str) -> bool:
+    safe_filename = Path(filename).name
+
+    if not safe_filename.endswith(".conf"):
+        return False
+
+    conf_path = NGINX_CONFIG_DIR / safe_filename
+
+    if not conf_path.exists():
+        return False
+
+    conf_path.write_text(content, encoding="utf-8")
+
+    return True

@@ -1,13 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from .forms import SiteProvisionForm, DomainDiagnosticForm
+from .forms import SiteProvisionForm, DomainDiagnosticForm, VhostEditForm
 from .generator import (
     write_project_files,
     generate_commands,
     list_vhosts,
     get_vhost_detail,
     get_dashboard_summary,
+    update_vhost_file,
 )
 from .diagnostics import run_domain_diagnostics
 
@@ -123,4 +124,58 @@ def diagnostics_view(request):
             "results": results,
             "domain": domain,
         }
+    )
+
+
+@login_required
+def site_edit(request, filename):
+    vhost = get_vhost_detail(filename)
+
+    if vhost is None:
+        return render(
+            request,
+            "dashboard/site_edit.html",
+            {"vhost": None},
+            status=404,
+        )
+
+    form = VhostEditForm(
+        initial={
+            "content": vhost["content"],
+        }
+    )
+
+    if request.method == "POST":
+        form = VhostEditForm(request.POST)
+
+        if form.is_valid():
+            update_vhost_file(
+                filename,
+                form.cleaned_data["content"],
+            )
+
+            vhost = get_vhost_detail(filename)
+
+            return render(
+                request,
+                "dashboard/site_edit.html",
+                {
+                    "vhost": vhost,
+                    "form": VhostEditForm(
+                        initial={
+                            "content": vhost["content"],
+                        }
+                    ),
+                    "saved": True,
+                },
+            )
+
+    return render(
+        request,
+        "dashboard/site_edit.html",
+        {
+            "vhost": vhost,
+            "form": form,
+            "saved": False,
+        },
     )
