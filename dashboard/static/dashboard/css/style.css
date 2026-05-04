@@ -380,3 +380,67 @@ body {
 .diagnostic-error {
   border-color: rgba(255, 107, 107, 0.18);
 }
+
+.layout-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.layout-auth .main {
+  width: 100%;
+  max-width: 460px;
+  padding: 0;
+}
+
+.login-card {
+  width: 100%;
+}
+
+.login-card .page-title {
+  margin-bottom: 8px;
+}
+
+.login-card .muted {
+  margin-bottom: 22px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: 20px;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .diagnostic-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

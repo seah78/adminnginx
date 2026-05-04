@@ -12,7 +12,7 @@
 </head>
 
 <body>
-  <div class="layout">
+  <div class="layout {% if not request.user.is_authenticated %}layout-auth{% endif %}">
     {% if request.user.is_authenticated %}
 
     <aside class="sidebar">
@@ -29,8 +29,8 @@
       </nav>
     </aside>
     {% endif %}
-    <main class="main">
 
+    <main class="main">
       {% if request.user.is_authenticated %}
       <header class="topbar">
         <div>
@@ -59,6 +59,7 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
   <script src="{% static 'dashboard/js/main.js' %}"></script>
 </body>
 
