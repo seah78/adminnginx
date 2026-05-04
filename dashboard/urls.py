@@ -13,6 +13,6 @@ urlpatterns = [
     path("sites/", site_list, name="site_list"),
     path("sites/new/", site_create, name="site_create"),
     path("sites/<str:filename>/", site_detail, name="site_detail"),
-    path("diagnostics/", diagnostics_view, name="diagnostics"),1,
+    path("diagnostics/", diagnostics_view, name="diagnostics"),
     path("sites/<str:filename>/edit/", site_edit, name="site_edit"),
 ]
