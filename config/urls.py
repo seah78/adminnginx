@@ -17,11 +17,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from django.http import HttpResponse
 
+def robots_txt(request):
+    return HttpResponse(
+        "User-agent: *\nDisallow: /\n",
+        content_type="text/plain",
+    )
 
 urlpatterns = [
     path("adminsecret/", admin.site.urls),
     path("admin/", lambda request: redirect("login")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("dashboard.urls")),
+    path("robots.txt", robots_txt),
 ]

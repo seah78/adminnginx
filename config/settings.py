@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'dashboard.middleware.NoIndexMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -157,6 +158,9 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_AGE = 300  # 5 minutes
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Non référencement
+SECURE_REFERRER_POLICY = "same-origin"
 
 X_FRAME_OPTIONS = "DENY"
 
