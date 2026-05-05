@@ -1,4 +1,4 @@
-# 🚀 adminnginx
+# adminnginx
 
 [![forthebadge](/badges/docker-container.svg)](https://forthebadge.com)
 
@@ -7,7 +7,7 @@ Interface graphique Django pour administrer un reverse proxy **Nginx + Docker + 
 
 ---
 
-## 🎯 Objectif
+## Objectif
 
 adminnginx permet de :
 
@@ -21,9 +21,9 @@ adminnginx permet de :
 
 ---
 
-## ⚙️ Prérequis
+## Prérequis
 
-### 🔹 Serveur
+### Serveur
 
 - Linux (Debian recommandé)
 - Accès SSH
@@ -31,7 +31,7 @@ adminnginx permet de :
 
 ---
 
-## 🔹 Reverse proxy Nginx (OBLIGATOIRE)
+## Reverse proxy Nginx (OBLIGATOIRE)
 
 `adminnginx` dépend d’un reverse proxy Nginx externe.
 
@@ -63,7 +63,7 @@ Le projet doit être installé dans :
 
 ---
 
-### 🔗 Rôle du proxy
+### Rôle du proxy
 
 Ce proxy est utilisé par `adminnginx` pour :
 
@@ -74,7 +74,7 @@ Ce proxy est utilisé par `adminnginx` pour :
 
 ---
 
-### ⚠️ Important
+### Important
 
 - Les volumes doivent être accessibles par `adminnginx`
 - Le réseau Docker (`internal_network`) doit être partagé
@@ -82,7 +82,7 @@ Ce proxy est utilisé par `adminnginx` pour :
 
 ---
 
-## 📦 Installation de adminnginx
+## Installation de adminnginx
 
 ### 1. Cloner le projet
 
@@ -134,7 +134,51 @@ docker exec -it adminnginx python manage.py createsuperuser
 
 ---
 
-## ⚠️ Notes
+## Sécurité
+
+### Double authentification (2FA)
+
+Admin Nginx permet d’activer une double authentification (TOTP) pour sécuriser l’accès au panel.
+
+Après la première connexion :
+
+1. Accéder à la page **Sécurité**
+2. Cliquer sur **Activer la double authentification**
+3. Scanner le QR code avec une application compatible :
+   - Google Authenticator
+   - Microsoft Authenticator
+   - Authy
+4. Valider avec le code à 6 chiffres
+
+Une fois activée :
+
+- Un code sera demandé à chaque connexion
+- L’accès au dashboard est bloqué tant que la vérification n’est pas validée
+
+---
+
+### Désactivation
+
+La désactivation nécessite la saisie d’un code valide.
+
+---
+
+### Procédure de secours
+
+En cas de perte de l’application 2FA, il est possible de désactiver la protection depuis le serveur :
+
+```bash
+docker exec -it adminnginx python manage.py shell
+```
+
+Puis :
+
+```bash
+from django_otp.plugins.otp_totp.models import TOTPDevice
+TOTPDevice.objects.all().delete()
+```
+
+## Notes
 
 - nginx_proxy est obligatoire
 - Vérifier les volumes
