@@ -45,3 +45,16 @@ class VhostEditForm(forms.Form):
             }
         ),
     )
+
+class TwoFactorVerifyForm(forms.Form):
+    token = forms.CharField(
+        label="Code de vérification",
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "one-time-code",
+                "placeholder": "123456",
+            }
+        ),
+    )

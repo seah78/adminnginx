@@ -1,4 +1,10 @@
 import threading
+import base64
+import qrcode
+
+from io import BytesIO
+from django.contrib import messages
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -8,6 +14,7 @@ from .forms import (
     SiteProvisionForm,
     DomainDiagnosticForm,
     VhostEditForm,
+    TwoFactorVerifyForm,
 )
 
 from .generator import (
@@ -249,3 +256,89 @@ def operation_progress(request, operation_id):
 @login_required
 def operation_status(request, operation_id):
     return JsonResponse(get_operation(operation_id))
+
+
+@login_required
+def security_view(request):
+    device = TOTPDevice.objects.filter(
+        user=request.user,
+        confirmed=True,
+    ).first()
+
+    return render(
+        request,
+        "dashboard/security.html",
+        {
+            "two_factor_enabled": device is not None,
+        },
+    )
+
+
+@login_required
+def two_factor_setup(request):
+    device, created = TOTPDevice.objects.get_or_create(
+        user=request.user,
+        name="default",
+        defaults={
+            "confirmed": False,
+        },
+    )
+
+    if device.confirmed:
+        return redirect("security")
+
+    form = TwoFactorVerifyForm()
+
+    if request.method == "POST":
+        form = TwoFactorVerifyForm(request.POST)
+
+        if form.is_valid():
+            token = form.cleaned_data["token"]
+
+            if device.verify_token(token):
+                device.confirmed = True
+                device.save()
+
+                messages.success(
+                    request,
+                    "La double authentification est activée.",
+                )
+
+                return redirect("security")
+
+            messages.error(
+                request,
+                "Code invalide. Réessaie avec un nouveau code.",
+            )
+
+    qr = qrcode.make(device.config_url)
+
+    stream = BytesIO()
+    qr.save(stream, format="PNG")
+
+    qr_base64 = base64.b64encode(
+        stream.getvalue()
+    ).decode("utf-8")
+
+    return render(
+        request,
+        "dashboard/two_factor_setup.html",
+        {
+            "form": form,
+            "device": device,
+            "qr_base64": qr_base64,
+        },
+    )
+
+
+@login_required
+def two_factor_disable(request):
+    if request.method == "POST":
+        TOTPDevice.objects.filter(user=request.user).delete()
+
+        messages.success(
+            request,
+            "La double authentification est désactivée.",
+        )
+
+    return redirect("security")

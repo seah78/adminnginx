@@ -1,0 +1,79 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Activer 2FA | Admin Nginx{% endblock %}
+
+{% block page_title %}Activer la double authentification{% endblock %}
+
+{% block page_subtitle %}
+Scanne le QR code avec ton application d’authentification, puis saisis le code généré.
+{% endblock %}
+
+{% block content %}
+
+<section class="card">
+  <div class="panel-title">
+    <h2>QR Code</h2>
+    <span class="badge badge-orange">Configuration</span>
+  </div>
+
+<div class="qr-box">
+  <img
+    src="data:image/png;base64,{{ qr_base64 }}"
+    alt="QR Code double authentification"
+  >
+</div>
+
+  <p class="muted" style="margin-top:16px;">
+    Si tu ne peux pas scanner le QR code, utilise cette URL de configuration :
+  </p>
+
+  <pre class="code-block"><code>{{ device.config_url }}</code></pre>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Validation</h2>
+    <span class="badge badge-blue">Code 6 chiffres</span>
+  </div>
+
+  <form method="post" class="form">
+    {% csrf_token %}
+
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+
+        {% for error in field.errors %}
+          <p class="field-error">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button class="button" type="submit">
+        Valider et activer
+      </button>
+
+      <a class="button" href="{% url 'security' %}">
+        Annuler
+      </a>
+    </div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="panel-title">
+    <h2>Important</h2>
+    <span class="badge badge-red">Secours</span>
+  </div>
+
+  <p class="muted">
+    Note bien cette commande. Elle permet de désactiver la double authentification
+    depuis le serveur en cas de problème :
+  </p>
+
+  <pre class="code-block"><code>docker exec adminnginx python manage.py disable_2fa {{ request.user.username }}</code></pre>
+</section>
+
+{% endblock %}

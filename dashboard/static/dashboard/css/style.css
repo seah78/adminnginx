@@ -521,3 +521,16 @@ body {
     flex-direction: column;
   }
 }
+
+.qr-box {
+  display: inline-flex;
+  padding: 18px;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.qr-box img {
+  width: 220px;
+  height: 220px;
+  display: block;
+}

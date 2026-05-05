@@ -12,6 +12,9 @@ from .views import (
     diagnostics_view,
     operation_progress,
     operation_status,
+    security_view,
+    two_factor_setup,
+    two_factor_disable,
 )
 
 
@@ -25,13 +28,10 @@ urlpatterns = [
     path("sites/<str:filename>/nginx-test/", nginx_test_view, name="nginx_test"),
     path("sites/<str:filename>/nginx-reload/", nginx_reload_view, name="nginx_reload"),
     path("sites/<str:filename>/", site_detail, name="site_detail"),
-
     path("diagnostics/", diagnostics_view, name="diagnostics"),
-
     path("operations/<str:operation_id>/", operation_progress, name="operation_progress"),
-    path(
-        "operations/<str:operation_id>/status/",
-        operation_status,
-        name="operation_status",
-    ),
+    path("operations/<str:operation_id>/status/", operation_status, name="operation_status"),
+    path("security/", security_view, name="security"),
+    path("security/2fa/setup/", two_factor_setup, name="two_factor_setup"),
+    path("security/2fa/disable/", two_factor_disable, name="two_factor_disable"),
 ]
