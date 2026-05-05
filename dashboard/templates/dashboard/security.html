@@ -15,34 +15,31 @@ Gestion de la double authentification et des accès sensibles.
     <h2>Double authentification</h2>
 
     {% if two_factor_enabled %}
-      <span class="badge badge-green">Activée</span>
+    <span class="badge badge-green">Activée</span>
     {% else %}
-      <span class="badge badge-orange">Inactive</span>
+    <span class="badge badge-orange">Inactive</span>
     {% endif %}
   </div>
 
   {% if two_factor_enabled %}
-    <p class="muted">
-      La double authentification est active pour ton compte.
-    </p>
+  <p class="muted">
+    La double authentification est active pour ton compte.
+  </p>
 
-    <form method="post" action="{% url 'two_factor_disable' %}" class="actions">
-      {% csrf_token %}
-      <button class="button" type="submit">
-        Désactiver la double authentification
-      </button>
-    </form>
+  <a class="button" href="{% url 'two_factor_disable' %}">
+    Désactiver la double authentification
+  </a>
   {% else %}
-    <p class="muted">
-      Active une double authentification TOTP compatible avec Google Authenticator,
-      Authy, 1Password ou Bitwarden.
-    </p>
+  <p class="muted">
+    Active une double authentification TOTP compatible avec Google Authenticator,
+    Authy, 1Password ou Bitwarden.
+  </p>
 
-    <div class="actions">
-      <a class="button" href="{% url 'two_factor_setup' %}">
-        Activer la double authentification
-      </a>
-    </div>
+  <div class="actions">
+    <a class="button" href="{% url 'two_factor_setup' %}">
+      Activer la double authentification
+    </a>
+  </div>
   {% endif %}
 </section>
 
@@ -57,7 +54,8 @@ Gestion de la double authentification et des accès sensibles.
     connecte-toi au serveur en SSH puis exécute :
   </p>
 
-  <pre class="code-block"><code>docker exec adminnginx python manage.py disable_2fa {{ request.user.username }}</code></pre>
+  <pre
+    class="code-block"><code>docker exec adminnginx python manage.py disable_2fa {{ request.user.username }}</code></pre>
 </section>
 
 {% endblock %}

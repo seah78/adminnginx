@@ -1,0 +1,38 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Désactiver 2FA | Admin Nginx{% endblock %}
+
+{% block page_title %}Désactiver la double authentification{% endblock %}
+
+{% block page_subtitle %}
+Saisis ton code à 6 chiffres pour confirmer la désactivation.
+{% endblock %}
+
+{% block content %}
+<section class="card login-card">
+  <form method="post" class="form">
+    {% csrf_token %}
+
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+
+        {% for error in field.errors %}
+          <p class="field-error">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button class="button" type="submit">
+        Confirmer la désactivation
+      </button>
+
+      <a class="button" href="{% url 'security' %}">
+        Annuler
+      </a>
+    </div>
+  </form>
+</section>
+{% endblock %}

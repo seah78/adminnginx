@@ -333,15 +333,44 @@ def two_factor_setup(request):
 
 @login_required
 def two_factor_disable(request):
+    device = TOTPDevice.objects.filter(
+        user=request.user,
+        confirmed=True,
+    ).first()
+
+    if device is None:
+        return redirect("security")
+
+    form = TwoFactorVerifyForm()
+
     if request.method == "POST":
-        TOTPDevice.objects.filter(user=request.user).delete()
+        form = TwoFactorVerifyForm(request.POST)
 
-        messages.success(
-            request,
-            "La double authentification est désactivée.",
-        )
+        if form.is_valid():
+            token = form.cleaned_data["token"]
 
-    return redirect("security")
+            if device.verify_token(token):
+                TOTPDevice.objects.filter(user=request.user).delete()
+
+                messages.success(
+                    request,
+                    "La double authentification est désactivée.",
+                )
+
+                return redirect("security")
+
+            messages.error(
+                request,
+                "Code invalide. La double authentification n’a pas été désactivée.",
+            )
+
+    return render(
+        request,
+        "dashboard/two_factor_disable.html",
+        {
+            "form": form,
+        },
+    )
 
 @login_required
 def two_factor_verify(request):
