@@ -1,0 +1,32 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Vérification 2FA | Admin Nginx{% endblock %}
+
+{% block page_title %}Vérification double authentification{% endblock %}
+
+{% block page_subtitle %}
+Saisis le code à 6 chiffres généré par ton application d’authentification.
+{% endblock %}
+
+{% block content %}
+<section class="card login-card">
+  <form method="post" class="form">
+    {% csrf_token %}
+
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+
+        {% for error in field.errors %}
+          <p class="field-error">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button class="button" type="submit">Valider</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

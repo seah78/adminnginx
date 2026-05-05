@@ -15,6 +15,7 @@ from .views import (
     security_view,
     two_factor_setup,
     two_factor_disable,
+    two_factor_verify,
 )
 
 
@@ -34,4 +35,5 @@ urlpatterns = [
     path("security/", security_view, name="security"),
     path("security/2fa/setup/", two_factor_setup, name="two_factor_setup"),
     path("security/2fa/disable/", two_factor_disable, name="two_factor_disable"),
+    path("security/2fa/verify/", two_factor_verify, name="two_factor_verify"),
 ]

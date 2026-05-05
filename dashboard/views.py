@@ -342,3 +342,33 @@ def two_factor_disable(request):
         )
 
     return redirect("security")
+
+@login_required
+def two_factor_verify(request):
+    form = TwoFactorVerifyForm()
+
+    if request.method == "POST":
+        form = TwoFactorVerifyForm(request.POST)
+
+        if form.is_valid():
+            token = form.cleaned_data["token"]
+
+            devices = TOTPDevice.objects.filter(
+                user=request.user,
+                confirmed=True,
+            )
+
+            for device in devices:
+                if device.verify_token(token):
+                    request.session["two_factor_verified"] = True
+                    return redirect("dashboard")
+
+            messages.error(request, "Code invalide.")
+
+    return render(
+        request,
+        "dashboard/two_factor_verify.html",
+        {
+            "form": form,
+        },
+    )
