@@ -34,6 +34,10 @@ class RequireTwoFactorMiddleware:
             user=request.user,
             confirmed=True,
         ).exists()
+        
+        if not has_2fa:
+            request.session["two_factor_verified"] = True
+            return self.get_response(request)
 
         if has_2fa and not request.session.get("two_factor_verified"):
             return redirect("two_factor_verify")

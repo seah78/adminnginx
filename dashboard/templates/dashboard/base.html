@@ -12,8 +12,9 @@
 </head>
 
 <body>
-<div class="layout {% if not request.user.is_authenticated or not request.session.two_factor_verified|default:False %}layout-auth{% endif %}">
-      {% if request.user.is_authenticated and request.session.two_factor_verified|default:False %}
+  <div
+    class="layout {% if not request.user.is_authenticated or not request.session.two_factor_verified|default:False %}layout-auth{% endif %}">
+    {% if request.user.is_authenticated and request.session.two_factor_verified %}
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-title">Admin Nginx</div>
@@ -31,7 +32,7 @@
     {% endif %}
 
     <main class="main">
-      {% if request.user.is_authenticated and request.session.two_factor_verified|default:False %}
+      {% if request.user.is_authenticated and request.session.two_factor_verified %}
       <header class="topbar">
         <div>
           <h1 class="page-title">
