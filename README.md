@@ -1,7 +1,6 @@
 # adminnginx
 
-[![forthebadge](/badges/docker-container.svg)](https://forthebadge.com)
-
+[![forthebadge](https://forthebadge.com/images/badges/docker-container.svg)](https://forthebadge.com)
 
 Interface graphique Django pour administrer un reverse proxy **Nginx + Docker + Let's Encrypt**.
 
