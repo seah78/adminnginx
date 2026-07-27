@@ -145,6 +145,7 @@ ADMINNGINX_NGINX_CONFIG_DIR=/nginx-config
 ADMINNGINX_HOST_OPT_DIR=/host/opt
 ADMINNGINX_LETSENCRYPT_DIR=/letsencrypt
 ADMINNGINX_OPERATIONS_DIR=/app/data/operations
+ADMINNGINX_APPLICATION_START_TIMEOUT=30
 ```
 
 ---
@@ -170,6 +171,50 @@ docker exec adminnginx python manage.py collectstatic --noinput
 ```bash
 docker exec -it adminnginx python manage.py createsuperuser
 ```
+
+---
+
+## Provisionnement d'un projet
+
+Lors de l'ajout d'un domaine, `adminnginx` effectue désormais les contrôles
+suivants avant de créer le vhost Nginx :
+
+1. création du dossier `/opt/<projet>` et du fichier
+   `docker-compose.prod.yml` ;
+2. exécution de `docker compose up -d --pull always` sur ce fichier ;
+3. téléchargement de l'image GHCR et démarrage du conteneur applicatif ;
+4. connexion au réseau externe `internal_network` ;
+5. vérification que le conteneur reste actif ;
+6. vérification que le port interne saisi répond depuis `adminnginx` ;
+7. création et validation du vhost Nginx ;
+8. création du certificat puis activation HTTPS.
+
+En cas d'échec, l'écran de progression indique l'image, le conteneur, le
+réseau ou le port concerné et affiche les 50 dernières lignes de logs lorsque
+le conteneur s'arrête ou ne répond pas.
+
+Les erreurs Docker Compose courantes sont traduites en messages dédiés :
+
+- accès GHCR refusé (`denied` ou `unauthorized`) : image non encore publiée,
+  package privé ou authentification `read:packages` absente ;
+- image ou tag `latest` introuvable ;
+- réseau externe `internal_network` absent ;
+- volume externe `webapps_media` absent ;
+- nom de conteneur déjà utilisé.
+
+Une erreur de téléchargement ou de démarrage interrompt le provisionnement
+avant la création du vhost. Elle ne doit donc pas rendre la configuration
+globale de Nginx invalide.
+
+Le délai d'attente du port applicatif est de 30 secondes par défaut. Il peut
+être modifié dans `.env` :
+
+```env
+ADMINNGINX_APPLICATION_START_TIMEOUT=60
+```
+
+Pour une image GHCR privée, le moteur Docker utilisé par `adminnginx` doit
+disposer des autorisations nécessaires pour télécharger l'image.
 
 ---
 

@@ -7,6 +7,8 @@ from .generator import (
     generate_nginx_vhost,
     generate_nginx_https_vhost,
     get_vhost_detail,
+    run_application_compose,
+    verify_application_container,
     nginx_test,
     nginx_reload,
     run_certbot_certonly,
@@ -83,6 +85,22 @@ def provision_site_live(data: dict, operation_id: str) -> None:
                 ) > 0,
                 str(compose_path),
             ),
+        ):
+            finish_operation(operation_id, False)
+            return
+
+        if not run_live_step(
+            operation_id,
+            "Démarrage Docker Compose",
+            lambda: run_application_compose(compose_path, data),
+        ):
+            finish_operation(operation_id, False)
+            return
+
+        if not run_live_step(
+            operation_id,
+            "Vérification du conteneur et du réseau",
+            lambda: verify_application_container(data),
         ):
             finish_operation(operation_id, False)
             return

@@ -1,7 +1,11 @@
 import os
 import re
+import socket
+import subprocess
+import time
 import docker
 
+from docker.errors import APIError, NotFound
 from pathlib import Path
 
 
@@ -30,6 +34,96 @@ NGINX_PROXY_CONTAINER = os.getenv(
     "ADMINNGINX_NGINX_CONTAINER",
     "nginx_proxy",
 )
+
+APPLICATION_NETWORK = "internal_network"
+APPLICATION_START_TIMEOUT = int(
+    os.getenv("ADMINNGINX_APPLICATION_START_TIMEOUT", "30")
+)
+
+
+def explain_compose_failure(
+    output: str,
+    data: dict,
+    returncode: int,
+) -> str:
+    normalized = output.lower()
+    image_name = data["ghcr_image"]
+    container_name = data["container_name"]
+
+    if any(
+        marker in normalized
+        for marker in (
+            "denied",
+            "unauthorized",
+            "authentication required",
+            "requested access to the resource is denied",
+        )
+    ):
+        return (
+            f"GHCR refuse l'accès à l'image {image_name}.\n\n"
+            "Causes probables :\n"
+            "- le workflow GitHub Actions n'a pas encore publié l'image ;\n"
+            "- le package GHCR est privé ;\n"
+            "- le serveur n'est pas authentifié auprès de ghcr.io ;\n"
+            "- le compte ou le jeton utilisé n'a pas le droit read:packages.\n\n"
+            "Finalisez d'abord la publication GitHub Actions. Pour une image "
+            "privée, authentifiez ensuite le client Docker utilisé par "
+            "adminnginx avec un jeton autorisé à lire les packages.\n\n"
+            f"Sortie Docker Compose :\n{output}"
+        )
+
+    if any(
+        marker in normalized
+        for marker in (
+            "manifest unknown",
+            "not found",
+            "no such image",
+        )
+    ):
+        return (
+            f"L'image {image_name} ou son tag « latest » est introuvable sur "
+            "GHCR. Vérifiez le propriétaire, le nom du dépôt et la réussite "
+            "du workflow GitHub Actions.\n\n"
+            f"Sortie Docker Compose :\n{output}"
+        )
+
+    if "network" in normalized and (
+        "not found" in normalized or "declared as external" in normalized
+    ):
+        return (
+            f"Un réseau Docker externe requis est introuvable. Créez "
+            f"{APPLICATION_NETWORK} avant de relancer le provisionnement :\n"
+            f"docker network create {APPLICATION_NETWORK}\n\n"
+            f"Sortie Docker Compose :\n{output}"
+        )
+
+    if "volume" in normalized and (
+        "not found" in normalized or "declared as external" in normalized
+    ):
+        return (
+            "Un volume Docker externe requis est introuvable. Si les médias "
+            "sont activés, créez-le avec :\n"
+            "docker volume create webapps_media\n\n"
+            f"Sortie Docker Compose :\n{output}"
+        )
+
+    if (
+        "already in use by container" in normalized
+        or "container name" in normalized
+        and "already in use" in normalized
+    ):
+        return (
+            f"Le nom de conteneur {container_name} est déjà utilisé par un "
+            "autre projet. Supprimez le conflit ou choisissez un autre nom.\n\n"
+            f"Sortie Docker Compose :\n{output}"
+        )
+
+    return (
+        f"Échec de docker compose up (code {returncode}).\n"
+        f"{output or 'Aucune sortie Docker.'}\n\n"
+        "Vérifiez l'image GHCR, les volumes et réseaux externes, puis les "
+        f"éventuels conflits autour du conteneur {container_name}."
+    )
 
 
 def build_server_names(domain: str, include_www: bool) -> str:
@@ -79,6 +173,187 @@ networks:
   internal_network:
     external: true
 {media_volume}"""
+
+
+def run_application_compose(
+    compose_path: Path,
+    data: dict,
+) -> tuple[bool, str]:
+    """Run the generated Compose project through the mounted Docker socket."""
+    try:
+        if not compose_path.is_file():
+            return (
+                False,
+                f"Fichier Compose introuvable : {compose_path}",
+            )
+
+        result = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "--project-directory",
+                str(compose_path.parent),
+                "-f",
+                str(compose_path),
+                "up",
+                "-d",
+                "--pull",
+                "always",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+
+        output = "\n".join(
+            part.strip()
+            for part in (result.stdout, result.stderr)
+            if part.strip()
+        )
+
+        if result.returncode != 0:
+            return (
+                False,
+                explain_compose_failure(
+                    output,
+                    data,
+                    result.returncode,
+                ),
+            )
+
+        return True, output or (
+            f"Projet Compose démarré : {data['container_name']}"
+        )
+
+    except FileNotFoundError:
+        return (
+            False,
+            "La commande « docker compose » est absente du conteneur "
+            "adminnginx. Reconstruisez l'image avec le Dockerfile actuel.",
+        )
+    except subprocess.TimeoutExpired as error:
+        output = "\n".join(
+            part.strip()
+            for part in (error.stdout, error.stderr)
+            if part
+        )
+        return (
+            False,
+            "Le démarrage Docker Compose a dépassé 300 secondes.\n"
+            f"{output or 'Aucune sortie Docker.'}",
+        )
+    except Exception as error:
+        return (
+            False,
+            f"Erreur inattendue pendant docker compose up : {error}",
+        )
+
+
+def verify_application_container(data: dict) -> tuple[bool, str]:
+    """Check the state and shared network required for Nginx DNS."""
+    container_name = data["container_name"]
+
+    try:
+        client = docker.from_env()
+        container = client.containers.get(container_name)
+        container.reload()
+
+        if container.status != "running":
+            logs = container.logs(
+                stdout=True,
+                stderr=True,
+                tail=50,
+            ).decode("utf-8", errors="ignore")
+            return (
+                False,
+                f"Le conteneur {container_name} n'est pas actif "
+                f"(état : {container.status}).\n"
+                f"Derniers logs :\n{logs or 'Aucun log disponible.'}",
+            )
+
+        networks = container.attrs.get("NetworkSettings", {}).get(
+            "Networks",
+            {},
+        )
+        if APPLICATION_NETWORK not in networks:
+            return (
+                False,
+                f"Le conteneur {container_name} n'est pas connecté au réseau "
+                f"{APPLICATION_NETWORK}. Nginx ne pourra pas résoudre son nom.",
+            )
+
+        deadline = time.monotonic() + APPLICATION_START_TIMEOUT
+        last_connection_error = ""
+
+        while time.monotonic() <= deadline:
+            container.reload()
+            if container.status != "running":
+                logs = container.logs(
+                    stdout=True,
+                    stderr=True,
+                    tail=50,
+                ).decode("utf-8", errors="ignore")
+                return (
+                    False,
+                    f"Le conteneur {container_name} s'est arrêté pendant son "
+                    f"démarrage (état : {container.status}).\n"
+                    f"Derniers logs :\n{logs or 'Aucun log disponible.'}",
+                )
+
+            try:
+                with socket.create_connection(
+                    (container_name, data["internal_port"]),
+                    timeout=2,
+                ):
+                    break
+            except OSError as error:
+                last_connection_error = str(error)
+                time.sleep(1)
+        else:
+            logs = container.logs(
+                stdout=True,
+                stderr=True,
+                tail=50,
+            ).decode("utf-8", errors="ignore")
+            return (
+                False,
+                f"Le conteneur {container_name} est actif, mais son port "
+                f"{data['internal_port']} ne répond pas après "
+                f"{APPLICATION_START_TIMEOUT} secondes. Vérifiez le port "
+                "interne saisi et la commande de démarrage de l'image.\n"
+                f"Dernière erreur réseau : {last_connection_error}\n"
+                f"Derniers logs :\n{logs or 'Aucun log disponible.'}",
+            )
+
+        network_ip = networks[APPLICATION_NETWORK].get(
+            "IPAddress",
+            "adresse non disponible",
+        )
+        return (
+            True,
+            f"Conteneur {container_name} actif sur {APPLICATION_NETWORK} "
+            f"({network_ip}), accessible par Nginx sur le port "
+            f"{data['internal_port']}.",
+        )
+
+    except NotFound:
+        return (
+            False,
+            f"Le conteneur {container_name} est introuvable après sa création.",
+        )
+    except APIError as error:
+        return (
+            False,
+            f"Impossible de vérifier le conteneur {container_name}.\n"
+            f"Détail Docker : {error}",
+        )
+    except Exception as error:
+        return (
+            False,
+            f"Erreur inattendue pendant la vérification de {container_name} : "
+            f"{error}",
+        )
 
 
 def generate_nginx_vhost(data: dict) -> str:
