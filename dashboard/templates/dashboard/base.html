@@ -19,12 +19,6 @@
       <div class="brand">
         <div class="brand-title">Admin Nginx</div>
         <div class="brand-subtitle">Reverse proxy control panel</div>
-        <div class="brand-subtitle"
-             title="Commit {{ adminnginx_version.git_sha }}">
-          {{ adminnginx_version.deployment }} ·
-          {{ adminnginx_version.version }} ·
-          {{ adminnginx_version.short_sha }}
-        </div>
       </div>
 
       <nav class="nav">
@@ -34,6 +28,27 @@
         <a href="{% url 'diagnostics' %}">Diagnostics</a>
         <a href="{% url 'security' %}">Sécurité</a>
       </nav>
+
+      <div class="sidebar-version"
+           title="Build {{ adminnginx_version.build_run }} · {{ adminnginx_version.build_date }}">
+        <div class="sidebar-version-title">Version déployée</div>
+        <dl>
+          <div>
+            <dt>Serveur</dt>
+            <dd>{{ adminnginx_version.deployment }}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>{{ adminnginx_version.version }}</dd>
+          </div>
+          <div>
+            <dt>Commit</dt>
+            <dd title="{{ adminnginx_version.git_sha }}">
+              {{ adminnginx_version.short_sha }}
+            </dd>
+          </div>
+        </dl>
+      </div>
     </aside>
     {% endif %}
 
