@@ -80,7 +80,12 @@ def provision_site_live(data: dict, operation_id: str) -> None:
             "Création du docker-compose",
             lambda: (
                 compose_path.write_text(
-                    generate_docker_compose(data),
+                    generate_docker_compose(
+                        {
+                            **data,
+                            "has_env_file": (project_dir / ".env").is_file(),
+                        }
+                    ),
                     encoding="utf-8",
                 ) > 0,
                 str(compose_path),

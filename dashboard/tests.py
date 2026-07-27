@@ -56,6 +56,20 @@ class MediaGenerationTests(SimpleTestCase):
         self.assertNotIn("webapps_media", compose)
         self.assertNotIn("location /media/", vhost)
 
+    def test_compose_uses_env_file_when_available(self):
+        self.data["has_env_file"] = True
+
+        compose = generate_docker_compose(self.data)
+
+        self.assertIn("env_file:\n      - .env", compose)
+
+    def test_compose_omits_env_file_when_unavailable(self):
+        self.data["has_env_file"] = False
+
+        compose = generate_docker_compose(self.data)
+
+        self.assertNotIn("env_file:", compose)
+
 
 class ApplicationContainerTests(SimpleTestCase):
     def setUp(self):

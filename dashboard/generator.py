@@ -147,6 +147,12 @@ def generate_media_location(data: dict) -> str:
 def generate_docker_compose(data: dict) -> str:
     media_service = ""
     media_volume = ""
+    env_file = ""
+
+    if data.get("has_env_file", False):
+        env_file = """    env_file:
+      - .env
+"""
 
     if data.get("enable_media", False):
         media_service = """    volumes:
@@ -163,6 +169,7 @@ volumes:
     image: {data["ghcr_image"]}
     container_name: {data["container_name"]}
     restart: unless-stopped
+{env_file}\
 {media_service}\
     networks:
       - internal_network
