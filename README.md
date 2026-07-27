@@ -42,10 +42,14 @@ adminnginx permet de :
 
 ### 📦 Installation du proxy
 
+Le chemin `/opt/nginx_proxy` est obligatoire avec la configuration fournie :
+`adminnginx` utilise explicitement ce chemin pour les bind mounts Docker et
+les opérations Certbot.
+
 ```bash
 cd /opt
 git clone https://github.com/seah78/nginx_proxy.git
-cd nginx_proxy
+cd /opt/nginx_proxy
 docker compose up -d
 ```
 
@@ -55,11 +59,20 @@ docker compose up -d
 
 Le projet doit être installé dans :
 
+```text
 /opt/nginx_proxy/
 ├── docker-compose.yml
 ├── nginx-config/
 ├── letsencrypt/
 └── html/
+```
+
+Les vhosts placés dans `nginx-config` doivent obligatoirement se terminer par
+`.conf`, par exemple :
+
+```text
+/opt/nginx_proxy/nginx-config/admin.example.com.conf
+```
 
 ---
 
@@ -80,6 +93,8 @@ Ce proxy est utilisé par `adminnginx` pour :
 - Le réseau Docker (`internal_network`) doit être partagé
 - Le conteneur doit s’appeler **nginx_proxy**
 - Le volume Docker externe `webapps_media` doit exister
+- Les commandes Certbot manuelles doivent utiliser les chemins absolus
+  `/opt/nginx_proxy/letsencrypt` et `/opt/nginx_proxy/html`
 
 Le proxy doit monter ce volume en lecture seule :
 
@@ -110,8 +125,17 @@ cd adminnginx
 
 ### 2. Créer le fichier .env
 
+Générer une clé secrète Django aléatoire :
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+Copier la valeur obtenue dans `DJANGO_SECRET_KEY`, puis créer le fichier
+`.env` :
+
 ```env
-DJANGO_SECRET_KEY=change-me
+DJANGO_SECRET_KEY=coller-ici-la-cle-generee
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=adminnginx.mondomaine.com
 CSRF_TRUSTED_ORIGINS=https://adminnginx.mondomaine.com
@@ -222,6 +246,15 @@ Créer le volume avant le premier déploiement s’il n’existe pas :
 docker volume create webapps_media
 ```
 
+Si un dossier bind-mounté comme `html`, `letsencrypt` ou `nginx-config` est
+supprimé puis recréé pendant que les conteneurs fonctionnent, il faut recréer
+les conteneurs pour reconstruire les montages :
+
+```bash
+cd /opt/nginx_proxy
+docker compose down
+docker compose up -d
+```
 
 ---
 
