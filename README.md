@@ -147,7 +147,23 @@ ADMINNGINX_LETSENCRYPT_DIR=/letsencrypt
 ADMINNGINX_OPERATIONS_DIR=/app/data/operations
 ADMINNGINX_APPLICATION_START_TIMEOUT=30
 ADMINNGINX_DEPLOYMENT_NAME=production-serveur-1
+DOCKER_CONFIG_PATH=/home/debian/.docker
 ```
+
+`DOCKER_CONFIG_PATH` doit désigner, sur l'hôte, le dossier `.docker` de
+l'utilisateur avec lequel `docker login ghcr.io` a été exécuté. Exemples :
+
+```env
+# docker login exécuté avec l'utilisateur debian
+DOCKER_CONFIG_PATH=/home/debian/.docker
+
+# docker login exécuté avec sudo/root
+DOCKER_CONFIG_PATH=/root/.docker
+```
+
+Ce dossier est monté en lecture seule dans `/root/.docker` dans le conteneur
+`adminnginx`. Le partage du socket Docker seul ne transmet pas les
+identifiants de registre du client exécuté sur l'hôte.
 
 ---
 

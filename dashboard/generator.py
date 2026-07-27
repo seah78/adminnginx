@@ -64,11 +64,14 @@ def explain_compose_failure(
             "Causes probables :\n"
             "- le workflow GitHub Actions n'a pas encore publié l'image ;\n"
             "- le package GHCR est privé ;\n"
-            "- le serveur n'est pas authentifié auprès de ghcr.io ;\n"
+            "- le dossier d'authentification Docker de l'hôte n'est pas "
+            "monté dans adminnginx ;\n"
             "- le compte ou le jeton utilisé n'a pas le droit read:packages.\n\n"
-            "Finalisez d'abord la publication GitHub Actions. Pour une image "
-            "privée, authentifiez ensuite le client Docker utilisé par "
-            "adminnginx avec un jeton autorisé à lire les packages.\n\n"
+            "Si « docker pull » fonctionne sur l'hôte mais échoue ici, "
+            "définissez DOCKER_CONFIG_PATH dans /opt/adminnginx/.env avec "
+            "le chemin du dossier .docker de l'utilisateur authentifié, puis "
+            "recréez adminnginx. Ce dossier est monté en lecture seule dans "
+            "/root/.docker.\n\n"
             f"Sortie Docker Compose :\n{output}"
         )
 

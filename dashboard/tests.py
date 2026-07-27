@@ -125,6 +125,7 @@ class ApplicationContainerTests(SimpleTestCase):
         self.assertIn("GHCR refuse l'accès", message)
         self.assertIn("workflow GitHub Actions", message)
         self.assertIn("read:packages", message)
+        self.assertIn("DOCKER_CONFIG_PATH", message)
         self.assertIn("package access denied", message)
 
     def test_missing_ghcr_tag_has_specific_message(self):
