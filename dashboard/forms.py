@@ -20,7 +20,13 @@ class SiteProvisionForm(forms.Form):
 
     internal_port = forms.IntegerField(
         label="Port interne du conteneur",
-        initial=80,
+        help_text=(
+            "Port réellement écouté par l'application dans le conteneur "
+            "(8000 par défaut pour Gunicorn/Django)."
+        ),
+        initial=8000,
+        min_value=1,
+        max_value=65535,
     )
 
     enable_media = forms.BooleanField(

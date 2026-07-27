@@ -190,6 +190,11 @@ class ApplicationContainerTests(SimpleTestCase):
         container = from_env.return_value.containers.get.return_value
         container.status = "running"
         container.attrs = {
+            "Config": {
+                "ExposedPorts": {
+                    "8000/tcp": {},
+                }
+            },
             "NetworkSettings": {
                 "Networks": {
                     APPLICATION_NETWORK: {"IPAddress": "172.20.0.10"},
@@ -219,6 +224,11 @@ class ApplicationContainerTests(SimpleTestCase):
         container = from_env.return_value.containers.get.return_value
         container.status = "running"
         container.attrs = {
+            "Config": {
+                "ExposedPorts": {
+                    "8000/tcp": {},
+                }
+            },
             "NetworkSettings": {
                 "Networks": {
                     APPLICATION_NETWORK: {"IPAddress": "172.20.0.10"},
@@ -232,7 +242,15 @@ class ApplicationContainerTests(SimpleTestCase):
 
         self.assertFalse(success)
         self.assertIn("port 8000 ne répond pas", message)
+        self.assertIn("Ports déclarés par l'image : 8000/tcp", message)
         self.assertIn("gunicorn failed", message)
+
+    def test_site_form_defaults_to_django_gunicorn_port(self):
+        from .forms import SiteProvisionForm
+
+        form = SiteProvisionForm()
+
+        self.assertEqual(form.fields["internal_port"].initial, 8000)
 
 
 class ProvisioningWorkflowTests(SimpleTestCase):

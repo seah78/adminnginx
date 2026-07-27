@@ -230,6 +230,10 @@ Le délai d'attente du port applicatif est de 30 secondes par défaut. Il peut
 ADMINNGINX_APPLICATION_START_TIMEOUT=60
 ```
 
+Le port interne proposé par défaut est `8000`, valeur habituellement utilisée
+par Gunicorn pour les projets Django. Il doit correspondre au port réellement
+écouté dans le conteneur, et non au port public 80 ou 443 de Nginx.
+
 Pour une image GHCR privée, le moteur Docker utilisé par `adminnginx` doit
 disposer des autorisations nécessaires pour télécharger l'image.
 

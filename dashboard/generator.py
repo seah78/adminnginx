@@ -326,6 +326,19 @@ def verify_application_container(data: dict) -> tuple[bool, str]:
                 stderr=True,
                 tail=50,
             ).decode("utf-8", errors="ignore")
+            exposed_ports = sorted(
+                (
+                    container.attrs.get("Config", {})
+                    .get("ExposedPorts", {})
+                    .keys()
+                )
+            )
+            exposed_hint = ""
+            if exposed_ports:
+                exposed_hint = (
+                    "\nPorts déclarés par l'image : "
+                    f"{', '.join(exposed_ports)}."
+                )
             return (
                 False,
                 f"Le conteneur {container_name} est actif, mais son port "
@@ -333,6 +346,7 @@ def verify_application_container(data: dict) -> tuple[bool, str]:
                 f"{APPLICATION_START_TIMEOUT} secondes. Vérifiez le port "
                 "interne saisi et la commande de démarrage de l'image.\n"
                 f"Dernière erreur réseau : {last_connection_error}\n"
+                f"{exposed_hint}\n"
                 f"Derniers logs :\n{logs or 'Aucun log disponible.'}",
             )
 
