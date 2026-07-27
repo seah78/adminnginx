@@ -13,6 +13,7 @@ adminnginx permet de :
 - Visualiser les vhosts Nginx
 - Gérer les certificats SSL
 - Ajouter / modifier / supprimer des sites Docker
+- Partager les médias Django avec Nginx
 - Automatiser la configuration HTTP → HTTPS
 - Générer automatiquement les certificats Let's Encrypt
 - Lancer des diagnostics réseau (DNS / HTTP / HTTPS / SSL)
@@ -78,6 +79,20 @@ Ce proxy est utilisé par `adminnginx` pour :
 - Les volumes doivent être accessibles par `adminnginx`
 - Le réseau Docker (`internal_network`) doit être partagé
 - Le conteneur doit s’appeler **nginx_proxy**
+- Le volume Docker externe `webapps_media` doit exister
+
+Le proxy doit monter ce volume en lecture seule :
+
+```yaml
+services:
+  nginx:
+    volumes:
+      - webapps_media:/srv/webapps-media:ro
+
+volumes:
+  webapps_media:
+    external: true
+```
 
 ---
 
@@ -101,10 +116,11 @@ DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=adminnginx.mondomaine.com
 CSRF_TRUSTED_ORIGINS=https://adminnginx.mondomaine.com
 
-NGINX_PROXY_CONTAINER=nginx_proxy
-NGINX_CONFIG_PATH=/nginx-config
-NGINX_HTML_PATH=/nginx-html
-LETSENCRYPT_PATH=/letsencrypt
+ADMINNGINX_NGINX_CONTAINER=nginx_proxy
+ADMINNGINX_NGINX_CONFIG_DIR=/nginx-config
+ADMINNGINX_HOST_OPT_DIR=/host/opt
+ADMINNGINX_LETSENCRYPT_DIR=/letsencrypt
+ADMINNGINX_OPERATIONS_DIR=/app/data/operations
 ```
 
 ---
@@ -112,7 +128,7 @@ LETSENCRYPT_PATH=/letsencrypt
 ### 3. Lancer
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ---
@@ -182,6 +198,29 @@ TOTPDevice.objects.all().delete()
 - nginx_proxy est obligatoire
 - Vérifier les volumes
 - Vérifier les permissions /opt
+
+## Médias Django
+
+Lors de la création d’un site, l’option **Partager le dossier media avec
+Nginx** est activée par défaut. Elle :
+
+- monte le volume externe `webapps_media` dans `/app/media` dans le conteneur
+  applicatif ;
+- ajoute un bloc Nginx `location /media/` servi depuis
+  `/srv/webapps-media/`.
+
+Le projet Django déployé doit utiliser les réglages suivants :
+
+```python
+MEDIA_URL = "/media/"
+MEDIA_ROOT = "/app/media"
+```
+
+Créer le volume avant le premier déploiement s’il n’existe pas :
+
+```bash
+docker volume create webapps_media
+```
 
 
 ---

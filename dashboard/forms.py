@@ -23,6 +23,16 @@ class SiteProvisionForm(forms.Form):
         initial=80,
     )
 
+    enable_media = forms.BooleanField(
+        label="Partager le dossier media avec Nginx",
+        help_text=(
+            "Monte le volume externe webapps_media dans /app/media "
+            "et publie son contenu sous /media/."
+        ),
+        required=False,
+        initial=True,
+    )
+
     certbot_email = forms.EmailField(
         label="Email Certbot",
     )

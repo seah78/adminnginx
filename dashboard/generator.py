@@ -38,12 +38,38 @@ def build_server_names(domain: str, include_www: bool) -> str:
     return domain
 
 
+def generate_media_location(data: dict) -> str:
+    if not data.get("enable_media", False):
+        return ""
+
+    return """
+    location /media/ {
+        alias /srv/webapps-media/;
+        autoindex off;
+    }
+"""
+
+
 def generate_docker_compose(data: dict) -> str:
+    media_service = ""
+    media_volume = ""
+
+    if data.get("enable_media", False):
+        media_service = """    volumes:
+      - webapps_media:/app/media
+"""
+        media_volume = """
+volumes:
+  webapps_media:
+    external: true
+"""
+
     return f"""services:
   {data["project_name"]}:
     image: {data["ghcr_image"]}
     container_name: {data["container_name"]}
     restart: unless-stopped
+{media_service}\
     networks:
       - internal_network
     expose:
@@ -52,7 +78,7 @@ def generate_docker_compose(data: dict) -> str:
 networks:
   internal_network:
     external: true
-"""
+{media_volume}"""
 
 
 def generate_nginx_vhost(data: dict) -> str:
@@ -60,6 +86,7 @@ def generate_nginx_vhost(data: dict) -> str:
         data["domain"],
         data["include_www"],
     )
+    media_location = generate_media_location(data)
 
     return f"""server {{
     listen 80;
@@ -69,6 +96,7 @@ def generate_nginx_vhost(data: dict) -> str:
     location /.well-known/acme-challenge/ {{
         root /usr/share/nginx/html;
     }}
+{media_location}
 
     location / {{
         proxy_pass http://{data["container_name"]}:{data["internal_port"]};
@@ -86,6 +114,7 @@ def generate_nginx_https_vhost(data: dict) -> str:
         data["domain"],
         data["include_www"],
     )
+    media_location = generate_media_location(data)
 
     return f"""server {{
     listen 80;
@@ -108,6 +137,7 @@ server {{
 
     ssl_certificate /etc/letsencrypt/live/{data["domain"]}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/{data["domain"]}/privkey.pem;
+{media_location}
 
     location / {{
         proxy_pass http://{data["container_name"]}:{data["internal_port"]};
