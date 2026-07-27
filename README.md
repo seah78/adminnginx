@@ -272,15 +272,63 @@ docker inspect adminnginx \
   --format 'Version={{ index .Config.Labels "org.opencontainers.image.version" }} SHA={{ index .Config.Labels "org.opencontainers.image.revision" }} Image={{ .Config.Image }}'
 ```
 
-Pour déployer automatiquement sur deux serveurs, créer deux environnements
-GitHub, par exemple `production-serveur-1` et `production-serveur-2`, avec les
-mêmes noms de secrets (`SERVER_HOST`, `SERVER_USER`, `SERVER_PORT` et
-`SERVER_SSH_KEY`). Les environnements GitHub conservent un historique séparé
-des déploiements et peuvent appliquer leurs propres protections.
+Le workflow ne contient aucun nom de serveur ou d'environnement. Il construit
+dynamiquement sa matrice depuis une variable de configuration GitHub nommée :
 
-Le workflow fourni déploie le serveur référencé par les secrets `SERVER_*`.
-Pour deux serveurs, utiliser deux jobs associés à leurs environnements
-respectifs ou une matrice de déploiement.
+```text
+ADMINNGINX_DEPLOY_ENVIRONMENTS
+```
+
+Créer cette variable dans **Settings → Secrets and variables → Actions →
+Variables**. Sa valeur est un tableau JSON contenant les environnements à
+déployer, par exemple :
+
+```json
+["production-ovh", "production-datacenter", "preproduction"]
+```
+
+Les noms et leur nombre ne figurent donc pas dans `deploy.yml`. Pour ajouter
+ou retirer un serveur, modifier uniquement cette variable dans les paramètres
+GitHub, sans commit.
+
+Créer ensuite chaque environnement correspondant dans **Settings →
+Environments**. Dans chacun, ajouter les mêmes noms de secrets avec les valeurs
+propres au serveur :
+
+```text
+SERVER_HOST
+SERVER_USER
+SERVER_PORT
+SERVER_SSH_KEY
+```
+
+Exemple de correspondance :
+
+| Environnement | `SERVER_HOST` |
+|---|---|
+| premier nom du tableau JSON | adresse du premier serveur |
+| second nom du tableau JSON | adresse du second serveur |
+
+Les secrets définis directement au niveau du dépôt avec ces mêmes noms
+doivent être déplacés dans les deux environnements. Sinon, les deux jobs
+risquent d'utiliser la même cible.
+
+Le build de l'image n'est exécuté qu'une fois. Les déploiements sont ensuite
+lancés avec une matrice et `fail-fast: false` : l'échec d'un serveur n'annule
+pas le déploiement des autres. Chaque job :
+
+1. utilise les secrets de son environnement ;
+2. déploie exactement le même tag `sha-<commit>` ;
+3. injecte automatiquement `ADMINNGINX_DEPLOYMENT_NAME` avec le nom de
+   l'environnement ;
+4. vérifie que le SHA réellement exécuté correspond au SHA attendu.
+
+GitHub conserve ainsi un historique de déploiement séparé pour chaque serveur.
+
+La variable `ADMINNGINX_DEPLOY_ENVIRONMENTS` ne doit contenir que des noms
+logiques, jamais d'adresse IP, d'utilisateur, de port sensible ou de clé. Les
+informations de connexion restent exclusivement dans les secrets chiffrés des
+environnements. Les variables GitHub ne sont pas masquées dans les logs.
 
 ---
 

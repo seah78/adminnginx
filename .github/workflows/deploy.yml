@@ -61,11 +61,15 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(vars.ADMINNGINX_DEPLOY_ENVIRONMENTS) }}
     environment:
-      name: production
+      name: ${{ matrix.environment }}
 
     steps:
-      - name: Deploy on dedicated server
+      - name: Deploy on ${{ matrix.environment }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -77,6 +81,7 @@ jobs:
             git fetch origin "${{ github.sha }}"
             git checkout --detach "${{ github.sha }}"
             export ADMINNGINX_IMAGE="${{ env.IMAGE_REPOSITORY }}:sha-${{ github.sha }}"
+            export ADMINNGINX_DEPLOYMENT_NAME="${{ matrix.environment }}"
             docker compose -f docker-compose.prod.yml pull adminnginx
             docker compose -f docker-compose.prod.yml up -d --force-recreate adminnginx
             docker exec adminnginx python manage.py check

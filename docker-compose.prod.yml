@@ -4,6 +4,8 @@ services:
     container_name: adminnginx
     env_file:
       - .env
+    environment:
+      ADMINNGINX_DEPLOYMENT_NAME: ${ADMINNGINX_DEPLOYMENT_NAME:-non-configure}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
