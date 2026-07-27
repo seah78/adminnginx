@@ -29,6 +29,13 @@ from .generator import (
 from .diagnostics import run_domain_diagnostics
 from .operation_store import create_operation, get_operation
 from .provisioner import provision_site_live, delete_site_live
+from .version import get_version_info
+
+
+def version_view(request):
+    response = JsonResponse(get_version_info())
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 @login_required

@@ -1,3 +1,5 @@
+import os
+
 from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
@@ -12,6 +14,7 @@ from .generator import (
     verify_application_container,
 )
 from .provisioner import provision_site_live
+from .version import get_version_info
 
 
 class MediaGenerationTests(SimpleTestCase):
@@ -249,3 +252,41 @@ class ProvisioningWorkflowTests(SimpleTestCase):
             steps.index("Création du vhost HTTP"),
         )
         finish_operation.assert_called_once_with("operation-id", False)
+
+
+class VersionTests(SimpleTestCase):
+    @patch.dict(
+        os.environ,
+        {
+            "ADMINNGINX_VERSION": "build-42",
+            "ADMINNGINX_GIT_SHA": "abcdef1234567890",
+            "ADMINNGINX_BUILD_DATE": "2026-07-27T12:00:00Z",
+            "ADMINNGINX_BUILD_RUN": "123456",
+            "ADMINNGINX_DEPLOYMENT_NAME": "production-paris",
+        },
+        clear=False,
+    )
+    def test_version_info_contains_build_and_deployment(self):
+        info = get_version_info()
+
+        self.assertEqual(info["version"], "build-42")
+        self.assertEqual(info["git_sha"], "abcdef1234567890")
+        self.assertEqual(info["short_sha"], "abcdef123456")
+        self.assertEqual(info["deployment"], "production-paris")
+
+    @patch.dict(
+        os.environ,
+        {
+            "ADMINNGINX_VERSION": "build-42",
+            "ADMINNGINX_GIT_SHA": "abcdef1234567890",
+            "ADMINNGINX_DEPLOYMENT_NAME": "production-paris",
+        },
+        clear=False,
+    )
+    def test_public_version_endpoint_is_not_cached(self):
+        response = self.client.get("/version/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["version"], "build-42")
+        self.assertEqual(response.json()["deployment"], "production-paris")
+        self.assertEqual(response["Cache-Control"], "no-store")

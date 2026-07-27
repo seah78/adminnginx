@@ -16,10 +16,12 @@ from .views import (
     two_factor_setup,
     two_factor_disable,
     two_factor_verify,
+    version_view,
 )
 
 
 urlpatterns = [
+    path("version/", version_view, name="version"),
     path("", dashboard_home, name="dashboard"),
 
     path("sites/", site_list, name="site_list"),

@@ -5,8 +5,12 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-adminnginx-production
+  cancel-in-progress: false
+
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/adminnginx:latest
+  IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/adminnginx
 
 jobs:
   build-and-push:
@@ -27,16 +31,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare build metadata
+        id: metadata
+        shell: bash
+        run: |
+          echo "version=build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_NAME }}
+          tags: |
+            ${{ env.IMAGE_REPOSITORY }}:latest
+            ${{ env.IMAGE_REPOSITORY }}:${{ steps.metadata.outputs.version }}
+            ${{ env.IMAGE_REPOSITORY }}:sha-${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ steps.metadata.outputs.version }}
+            APP_GIT_SHA=${{ github.sha }}
+            APP_BUILD_DATE=${{ steps.metadata.outputs.build_date }}
+            APP_BUILD_RUN=${{ github.run_id }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.metadata.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.metadata.outputs.build_date }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment:
+      name: production
 
     steps:
       - name: Deploy on dedicated server
@@ -48,6 +74,13 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /opt/adminnginx
-            docker compose pull
-            docker compose up -d --force-recreate
+            git fetch origin "${{ github.sha }}"
+            git checkout --detach "${{ github.sha }}"
+            export ADMINNGINX_IMAGE="${{ env.IMAGE_REPOSITORY }}:sha-${{ github.sha }}"
+            docker compose -f docker-compose.prod.yml pull adminnginx
+            docker compose -f docker-compose.prod.yml up -d --force-recreate adminnginx
+            docker exec adminnginx python manage.py check
+            ACTUAL_SHA=$(docker inspect --format='{{ index .Config.Labels "org.opencontainers.image.revision" }}' adminnginx)
+            test "$ACTUAL_SHA" = "${{ github.sha }}"
+            docker inspect --format='Version={{ index .Config.Labels "org.opencontainers.image.version" }} SHA={{ index .Config.Labels "org.opencontainers.image.revision" }} Image={{ .Config.Image }}' adminnginx
             docker image prune -f

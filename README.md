@@ -146,6 +146,7 @@ ADMINNGINX_HOST_OPT_DIR=/host/opt
 ADMINNGINX_LETSENCRYPT_DIR=/letsencrypt
 ADMINNGINX_OPERATIONS_DIR=/app/data/operations
 ADMINNGINX_APPLICATION_START_TIMEOUT=30
+ADMINNGINX_DEPLOYMENT_NAME=production-serveur-1
 ```
 
 ---
@@ -215,6 +216,71 @@ ADMINNGINX_APPLICATION_START_TIMEOUT=60
 
 Pour une image GHCR privée, le moteur Docker utilisé par `adminnginx` doit
 disposer des autorisations nécessaires pour télécharger l'image.
+
+---
+
+## Version déployée
+
+Chaque build GitHub Actions publie trois tags pour la même image :
+
+```text
+latest
+build-<numero-du-run>
+sha-<commit-git-complet>
+```
+
+Le déploiement utilise le tag immuable `sha-<commit>` plutôt que `latest`.
+Le checkout de `/opt/adminnginx` est également placé sur ce commit avant
+l'exécution du Compose. Après le redémarrage, GitHub Actions compare le label OCI
+`org.opencontainers.image.revision` du conteneur avec le commit attendu. Le
+job échoue si les deux valeurs diffèrent.
+
+La version est visible en bas de l'identité visuelle dans l'interface et via
+un endpoint public non mis en cache :
+
+```bash
+curl https://adminnginx.mondomaine.com/version/
+```
+
+Exemple :
+
+```json
+{
+  "version": "build-42",
+  "git_sha": "abcdef1234567890",
+  "short_sha": "abcdef123456",
+  "build_date": "2026-07-27T12:00:00Z",
+  "build_run": "123456789",
+  "deployment": "production-serveur-1"
+}
+```
+
+La variable suivante doit être différente sur chaque serveur :
+
+```env
+# Premier serveur
+ADMINNGINX_DEPLOYMENT_NAME=production-serveur-1
+
+# Second serveur
+ADMINNGINX_DEPLOYMENT_NAME=production-serveur-2
+```
+
+Vérification directe sur un serveur :
+
+```bash
+docker inspect adminnginx \
+  --format 'Version={{ index .Config.Labels "org.opencontainers.image.version" }} SHA={{ index .Config.Labels "org.opencontainers.image.revision" }} Image={{ .Config.Image }}'
+```
+
+Pour déployer automatiquement sur deux serveurs, créer deux environnements
+GitHub, par exemple `production-serveur-1` et `production-serveur-2`, avec les
+mêmes noms de secrets (`SERVER_HOST`, `SERVER_USER`, `SERVER_PORT` et
+`SERVER_SSH_KEY`). Les environnements GitHub conservent un historique séparé
+des déploiements et peuvent appliquer leurs propres protections.
+
+Le workflow fourni déploie le serveur référencé par les secrets `SERVER_*`.
+Pour deux serveurs, utiliser deux jobs associés à leurs environnements
+respectifs ou une matrice de déploiement.
 
 ---
 

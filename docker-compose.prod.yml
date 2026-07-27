@@ -1,6 +1,6 @@
 services:
   adminnginx:
-    image: ghcr.io/TON_COMPTE_GITHUB/adminnginx:latest
+    image: ${ADMINNGINX_IMAGE:-ghcr.io/seah78/adminnginx:latest}
     container_name: adminnginx
     env_file:
       - .env
